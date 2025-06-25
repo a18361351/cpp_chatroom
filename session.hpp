@@ -24,16 +24,18 @@ using errcode = boost::system::error_code;
 class MsgNode {
     friend class Session;
 public:
-    MsgNode(const char* msg, int msg_len) : data_(new char[msg_len]), cur_pos_(0), max_len_(msg_len) {
-        memcpy(data_, msg, msg_len);
+    MsgNode(const char* msg, std::size_t msg_len) : data_(msg_len > 0 ? new char[msg_len] : nullptr), cur_pos_(0), max_len_(msg_len) {
+        if (msg_len > 0)
+            memcpy(data_, msg, msg_len);
     }
     ~MsgNode() {
-        delete[] data_;
+        if (data_)
+            delete[] data_;
     }
 private:
     char* data_;
-    int cur_pos_;
-    int max_len_;
+    std::size_t cur_pos_;
+    std::size_t max_len_;
 };
 
 
@@ -76,28 +78,66 @@ public:
     }
     // 只要还有数据要发送，QueueSend就会一直被调用
     void QueueSend() {
-        locker lck(send_latch_);
+        send_latch_.lock();
         if (!send_q_.empty()) {
-            auto self = shared_from_this();
             msg_ptr ptr = send_q_.front();
+            send_latch_.unlock();
+            auto self = shared_from_this();
             boost::asio::async_write(sock_, boost::asio::buffer(ptr->data_ + ptr->cur_pos_, ptr->max_len_ - ptr->cur_pos_),
                 [self = std::move(self)](const errcode& err, size_t bytes_sent) {
                     if (err) {
                         // tell that error!
+                        self->srv_->RemoveSession(self->uuid_);
+                        self->sock_.close();
+                        fprintf(stderr, "Error in sending: %s\n", err.what().c_str());
+                        locker lck(self->send_latch_);
                         self->send_q_.clear();
                         return;
                     }
-                    locker lck(self->send_latch_);
-                    msg_ptr ptr = self->send_q_.front();
-                    ptr->cur_pos_ += bytes_sent;
-                    if (ptr->cur_pos_ >= ptr->max_len_) {
-                        self->send_q_.pop_front();
+                    {
+                        locker lck(self->send_latch_);
+                        msg_ptr ptr = self->send_q_.front();
+                        ptr->cur_pos_ += bytes_sent;
+                        if (ptr->cur_pos_ >= ptr->max_len_) {
+                            self->send_q_.pop_front();
+                        }
                     }
                     if (!self->send_q_.empty()) {
-                        self->QueueSend();  // TODO(user): deadlock prevent
+                        self->QueueSend();
                     }
                 });
+        } else {
+            send_latch_.unlock();
         }
+         
+        // locker lck(send_latch_);
+        // if (!send_q_.empty()) {
+        //     auto self = shared_from_this();
+        //     msg_ptr ptr = send_q_.front();
+        //     boost::asio::async_write(sock_, boost::asio::buffer(ptr->data_ + ptr->cur_pos_, ptr->max_len_ - ptr->cur_pos_),
+        //         [self = std::move(self)](const errcode& err, size_t bytes_sent) {
+        //             if (err) {
+        //                 // tell that error!
+        //                 self->srv_->RemoveSession(self->uuid_);
+        //                 self->sock_.close();
+        //                 fprintf(stderr, "Error in sending: %s\n", err.what().c_str());
+        //                 locker lck(self->send_latch_);
+        //                 self->send_q_.clear();
+        //                 return;
+        //             }
+        //             {
+        //                 locker lck(self->send_latch_);
+        //                 msg_ptr ptr = self->send_q_.front();
+        //                 ptr->cur_pos_ += bytes_sent;
+        //                 if (ptr->cur_pos_ >= ptr->max_len_) {
+        //                     self->send_q_.pop_front();
+        //                 }
+        //             }
+        //             if (!self->send_q_.empty()) {
+        //                 self->QueueSend();
+        //             }
+        //         });
+        // }
     }
 private:
     std::deque<msg_ptr> send_q_;    // 发送队列
