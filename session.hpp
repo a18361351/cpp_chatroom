@@ -6,6 +6,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/asio/read.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -24,6 +25,10 @@ using errcode = boost::system::error_code;
 class MsgNode {
     friend class Session;
 public:
+    // Ctors
+    // 通过最大长度构造空节点对象
+    MsgNode(std::size_t max_len) : data_(max_len > 0 ? new char[max_len] : nullptr), cur_pos_(0), max_len_(max_len) {}
+    // 通过字符串和最大长度构造带有消息的节点对象，一次拷贝
     MsgNode(const char* msg, std::size_t msg_len) : data_(msg_len > 0 ? new char[msg_len] : nullptr), cur_pos_(0), max_len_(msg_len) {
         if (msg_len > 0)
             memcpy(data_, msg, msg_len);
@@ -51,94 +56,49 @@ public:
         return uuid_;
     }
 
+
     // 已建立链接的Sess开始执行
     // 注意Session的生命周期管理由自己以及Server的sessions集合对象管理
     void Start() {
-        DoRecv();
+        Receiver();
     }
 
-    void DoRecv();
-    // void DoSend();
+    // -----------------------
+    // 读取时的回调操作
+public:
+    void ReceiveHandler(std::size_t bytes_rcvd);
+
+    void Receiver() {
+        auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
+            if (err) {
+                // tell that error!
+                return;
+            }
+            if (bytes_rcvd == 0) {
+                // closing
+                return;
+            }
+            self->ReceiveHandler(bytes_rcvd);
+            self->Receiver();   // 不断接收信息
+        };
+        sock_.async_receive(boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, recv_buf_.max_len_ - recv_buf_.cur_pos_), cb);
+        // boost::asio::async_read(sock_, boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, recv_buf_.max_len_ - recv_buf_.cur_pos_), cb);
+    }
+
+private:
+    MsgNode recv_buf_{1024};
+
+    // -----------------------
 
     // -----------------------
     // 异步发送时的队列操作
+public:
     using msg_ptr = std::shared_ptr<MsgNode>;
     using locker = std::unique_lock<std::mutex>;
-    void Send(const char* msg, int send_len) {
-        msg_ptr ptr = std::make_shared<MsgNode>(msg, send_len);
-        bool start_send;
-        {
-            locker lck(send_latch_);
-            start_send = send_q_.empty();
-            send_q_.push_back(ptr);
-        }
-        if (start_send) {
-            QueueSend();
-        }
-    }
+    void Send(const char* msg, int send_len);
+    // 获取
     // 只要还有数据要发送，QueueSend就会一直被调用
-    void QueueSend() {
-        send_latch_.lock();
-        if (!send_q_.empty()) {
-            msg_ptr ptr = send_q_.front();
-            send_latch_.unlock();
-            auto self = shared_from_this();
-            boost::asio::async_write(sock_, boost::asio::buffer(ptr->data_ + ptr->cur_pos_, ptr->max_len_ - ptr->cur_pos_),
-                [self = std::move(self)](const errcode& err, size_t bytes_sent) {
-                    if (err) {
-                        // tell that error!
-                        self->srv_->RemoveSession(self->uuid_);
-                        self->sock_.close();
-                        fprintf(stderr, "Error in sending: %s\n", err.what().c_str());
-                        locker lck(self->send_latch_);
-                        self->send_q_.clear();
-                        return;
-                    }
-                    {
-                        locker lck(self->send_latch_);
-                        msg_ptr ptr = self->send_q_.front();
-                        ptr->cur_pos_ += bytes_sent;
-                        if (ptr->cur_pos_ >= ptr->max_len_) {
-                            self->send_q_.pop_front();
-                        }
-                    }
-                    if (!self->send_q_.empty()) {
-                        self->QueueSend();
-                    }
-                });
-        } else {
-            send_latch_.unlock();
-        }
-         
-        // locker lck(send_latch_);
-        // if (!send_q_.empty()) {
-        //     auto self = shared_from_this();
-        //     msg_ptr ptr = send_q_.front();
-        //     boost::asio::async_write(sock_, boost::asio::buffer(ptr->data_ + ptr->cur_pos_, ptr->max_len_ - ptr->cur_pos_),
-        //         [self = std::move(self)](const errcode& err, size_t bytes_sent) {
-        //             if (err) {
-        //                 // tell that error!
-        //                 self->srv_->RemoveSession(self->uuid_);
-        //                 self->sock_.close();
-        //                 fprintf(stderr, "Error in sending: %s\n", err.what().c_str());
-        //                 locker lck(self->send_latch_);
-        //                 self->send_q_.clear();
-        //                 return;
-        //             }
-        //             {
-        //                 locker lck(self->send_latch_);
-        //                 msg_ptr ptr = self->send_q_.front();
-        //                 ptr->cur_pos_ += bytes_sent;
-        //                 if (ptr->cur_pos_ >= ptr->max_len_) {
-        //                     self->send_q_.pop_front();
-        //                 }
-        //             }
-        //             if (!self->send_q_.empty()) {
-        //                 self->QueueSend();
-        //             }
-        //         });
-        // }
-    }
+    void QueueSend();
 private:
     std::deque<msg_ptr> send_q_;    // 发送队列
     std::mutex send_latch_;         // 队列锁
