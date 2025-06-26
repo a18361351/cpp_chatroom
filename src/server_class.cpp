@@ -11,14 +11,23 @@ void Server::StartAccept() {
     acc_.async_accept([this](const errcode& err, boost::asio::ip::tcp::socket peer) -> void {
         if (!err) {
             // accept new session
-            auto sess = std::make_shared<Session>(peer, this);
+            auto sess = std::make_shared<Session>(std::move(peer), this);
             sessions_[sess->uuid()] = sess;
+            
+            // TODO(user): 用于Debug的地方在之后移除掉或转为log
+            printf("New session %s"
+                   " from %s:%d\n",
+                   sess->uuid().c_str(),
+                   peer.remote_endpoint().address().to_string().c_str(),
+                   peer.remote_endpoint().port());
+
             sess->Start();
 
             StartAccept();
         } else {
             // TODO(user): tell the error
-
+            printf("Error accepting new session: %s\n", err.message().c_str());
+            return;
         }
     });
 }

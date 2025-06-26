@@ -1,6 +1,10 @@
+#include <cstdio>
+#include <memory>
+
 #include "session.hpp"
 #include "server_class.hpp"
 
+using namespace std;
 using namespace boost::asio;
 
 void Session::Receiver() {
@@ -79,8 +83,26 @@ void Session::Receiver() {
 //     });
 // }
 
-void Session::Send(const char* msg, int send_len) {
-    msg_ptr ptr = std::make_shared<MsgNode>(msg, send_len);
+void Session::Send(const char* content, uint32_t send_len, uint32_t tag) {
+    msg_ptr ptr = std::make_shared<MsgNode>(content, send_len, tag);
+    // 如果队列原本是空的，表示当前没有正在执行的发送
+    // 那么我们就执行QueueSend函数以启动异步发送程序
+    // 对队列的操作通过send_latch保护
+    bool start_send;
+    {
+        // 临界区
+        // Send和Send之间不会冲突，能够确保任意时间只有至多一个Session的QueueSend会被执行
+        locker lck(send_latch_);
+        start_send = send_q_.empty();
+        send_q_.push_back(std::move(ptr));
+    }
+    if (start_send) {
+        QueueSend();
+    }
+}
+
+// Send3
+void Session::Send(shared_ptr<MsgNode> ptr) {
     // 如果队列原本是空的，表示当前没有正在执行的发送
     // 那么我们就执行QueueSend函数以启动异步发送程序
     // 对队列的操作通过send_latch保护
@@ -139,4 +161,13 @@ void Session::QueueSend()  {
     // 开始异步操作，ptr以及session自身保证有效
     boost::asio::async_write(sock_, boost::asio::buffer(front->data_ + front->cur_pos_, front->max_len_ - front->cur_pos_), cb);
 
+}
+
+void Session::ReceiveHandler(uint32_t content_len, uint32_t tag) {
+    // 将接收到的内容写入stdout
+    fwrite(recv_buf_.data_ + HEAD_LEN, 1, recv_buf_.ctx_len_,stdout);
+
+    // 作为ECHO服务器把数据原封不动地发回去
+    shared_ptr<MsgNode> ptr = make_shared<MsgNode>(recv_buf_.data_ + HEAD_LEN, recv_buf_.ctx_len_);
+    Send(ptr);
 }

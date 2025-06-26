@@ -17,7 +17,8 @@ public:
     Server(boost::asio::io_context& context) : context_(context), acc_(context) {}
 
     void Listen(boost::asio::ip::tcp::endpoint ep) {
-        acc_.bind(ep);
+        acc_.open(boost::asio::ip::tcp::v4());
+        acc_.bind(ep);  // 
         acc_.listen();  // default backlog
     }
 
