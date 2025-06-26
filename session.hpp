@@ -37,7 +37,8 @@ public:
     MsgNode(std::size_t max_len, uint32_t tag = 0) : 
         data_(max_len > 0 ? new char[TAG_LEN + LENGTH_LEN + max_len] : nullptr), 
         cur_pos_(0), 
-        ctx_len_(max_len) {
+        ctx_len_(max_len),
+        max_len_(max_len) {
         assert(TAG_LEN == sizeof(uint32_t));
         assert(LENGTH_LEN == sizeof(uint32_t));
         if (max_len > 0) {
@@ -53,7 +54,8 @@ public:
     MsgNode(const char* msg, std::size_t msg_len, uint32_t tag = 0) : 
         data_(msg_len > 0 ? new char[TAG_LEN + LENGTH_LEN + msg_len] : nullptr), 
         cur_pos_(0), 
-        ctx_len_(msg_len) {
+        ctx_len_(msg_len),
+        max_len_(msg_len) {
         assert(TAG_LEN == sizeof(uint32_t));
         assert(LENGTH_LEN == sizeof(uint32_t));
         if (msg_len > 0) {
@@ -159,6 +161,7 @@ public:
     // 只要还有数据要发送，QueueSend就会一直被调用
     void QueueSend();
 private:
+    // TODO(user): 发送队列可以设置长度限制，以保证不会产生发送速率过快的情况
     std::deque<msg_ptr> send_q_;    // 发送队列
     std::mutex send_latch_;         // 队列锁
     // -----------------------
