@@ -17,6 +17,7 @@ int main() {
         
         sigset.async_wait([&ctx](const errcode& err, int sig) {
             // 收到了信号
+            printf("Stopping\n");
             ctx.stop();
         });
 
@@ -25,7 +26,9 @@ int main() {
 
         Server srv(ctx);
         srv.Listen(local);  // 监听
+        srv.StartAccept();
 
+        printf("Server running\n");
         ctx.run();  // 运行
 
     } catch (std::exception& e) {
