@@ -67,8 +67,8 @@ public:
                 fflush(stdout);
                 return;
             }
-            fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
-            fflush(stdout);
+            // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
+            // fflush(stdout);
             // cur_pos更新
             self->recv_ptr_->cur_pos_ += bytes_rcvd;
             if (self->recv_ptr_->cur_pos_ >= HEAD_LEN) {
@@ -106,8 +106,8 @@ public:
                 fflush(stdout);
                 return;
             }
-            fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
-            fflush(stdout);
+            // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
+            // fflush(stdout);
             // cur_pos更新
             self->recv_ptr_->cur_pos_ += bytes_rcvd;
 

@@ -94,3 +94,29 @@ target_link_libraries(chat_client
         Boost::system
         # common
 )
+
+## Test programs
+# 添加可执行目标
+add_executable(concurrent_test EXCLUDE_FROM_ALL
+    test/concurrent_test.cpp
+)
+
+# 设置输出目录为 build/test
+set_target_properties(concurrent_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test
+)
+
+# 包含头文件目录
+target_include_directories(concurrent_test
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+    PUBLIC
+        ${Boost_INCLUDE_DIRS}
+)
+
+# 链接库
+target_link_libraries(concurrent_test
+    PRIVATE
+        Boost::system
+        # common
+)
