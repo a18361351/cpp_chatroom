@@ -10,6 +10,11 @@ using namespace std;
 using namespace boost::asio;
 
 int main() {
+#ifdef USING_IOCONTEXT_POOL
+    printf("Using IOContext Pool now\n");
+#elif defined(USING_IOTHREAD_POOL)
+    printf("Using IOThread Pool now\n");
+#endif
     try {
         boost::asio::io_context ctx;
         // 实现程序的优雅退出，监听SIGINT和SIGTERM

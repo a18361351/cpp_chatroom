@@ -3,6 +3,11 @@
 
 #include <unordered_map>
 
+#ifdef USING_IOCONTEXT_POOL
+#include "server/io_context_pool.hpp"
+#elif defined(USING_IOTHREAD_POOL)
+#include "server/io_thread_pool.hpp"
+#endif
 #include <boost/asio/io_context.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -27,7 +32,13 @@ public:
     // 强制下线逻辑
     bool Kick(const std::string& uuid);
 
-    
+    ~Server() {
+#ifdef USING_IOCONTEXT_POOL
+    Singleton<IOContextPool>::GetInstance().Stop();
+#elif defined(USING_IOTHREAD_POOL)
+    Singleton<IOThreadPool>::GetInstance().Stop();
+#endif
+    }
 private:
 
     bool RemoveSession(const std::string& uuid);
@@ -35,6 +46,8 @@ private:
     bool running{true};
     // 通过sessions_储存这些会话的智能指针，保持其不被销毁
     std::unordered_map<std::string, std::shared_ptr<Session>> sessions_;
+
+    // 在使用了IOThreadPool或者IOContextPool的情况下该context_只是用于acceptor的
     boost::asio::io_context& context_;
     boost::asio::ip::tcp::acceptor acc_;
 };

@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <memory>
 
+#include <boost/asio/bind_executor.hpp>
+
 #include "server/logic.hpp"
 #include "server/session.hpp"
 #include "server/server_class.hpp"
@@ -62,16 +64,16 @@ void Session::QueueSend()  {
             return;
         }
 
-        //  我们发送的消息没发完的情况（实际上async_write能够确保数据节点被发送完全，此时应该直接免去
-        // 发送大小的检查。但为了健壮性暂时留着
         bool continue_flag = false;
         // 临界区
         {
             locker lck(self->send_latch_);
-
+            
             msg_ptr ptr = self->send_q_.front();
             ptr->cur_pos_ += bytes_sent;
             
+            //  我们发送的消息没发完的情况（实际上async_write能够确保数据节点被发送完全，此时应该直接免去
+            // 发送大小的检查。但为了健壮性暂时留着
             if (ptr->cur_pos_ >= ptr->max_len_) {
                 self->send_q_.pop_front();
             }
@@ -84,7 +86,8 @@ void Session::QueueSend()  {
     };
 
     // 开始异步操作，ptr以及session自身保证有效
-    boost::asio::async_write(sock_, boost::asio::buffer(front->data_ + front->cur_pos_, front->max_len_ - front->cur_pos_), cb);
+    // strand保护同一strand的回调不会被并发执行
+    boost::asio::async_write(sock_, buffer(front->data_ + front->cur_pos_, front->max_len_ - front->cur_pos_), bind_executor(strand_, cb));
 
 }
 

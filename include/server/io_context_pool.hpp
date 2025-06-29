@@ -1,11 +1,12 @@
-#ifndef IO_Context_POOL_HEADER
-#define IO_Context_POOL_HEADER
+#ifndef IO_CONTEXT_POOL_HEADER
+#define IO_CONTEXT_POOL_HEADER
 
 #include <boost/asio.hpp>
 
 #include "utils/util_class.hpp"
 
 // IOContextPool是一种每个线程自己管理自己的IOContext的多线程模式
+// 多分发器多线程
 
 class IOContextPool : public Noncopyable {
     friend class Singleton<IOContextPool>;

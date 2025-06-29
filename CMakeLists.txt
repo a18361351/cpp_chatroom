@@ -12,6 +12,23 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Boost required
 find_package(Boost 1.81 REQUIRED COMPONENTS system coroutine)
 
+option(USE_IOCONTEXT_POOL "Use IOContext Pool implementation" OFF)
+option(USE_IOTHREAD_POOL "Use Thread Pool implementation" OFF)
+
+if (USE_IOCONTEXT_POOL AND USE_IOTHREAD_POOL)
+    message(FATAL_ERROR "Cannot use both IOContext Pool and Thread Pool at the same time.")
+endif()
+
+if (USE_IOCONTEXT_POOL)
+    add_compile_definitions(USING_IOCONTEXT_POOL)
+    message(STATUS "Using IOContext Pool implementation.")
+elseif (USE_IOTHREAD_POOL)
+    add_compile_definitions(USING_IOTHREAD_POOL)
+    message(STATUS "Using Thread Pool implementation.")
+else()
+    message(STATUS "Using default single-threaded implementation.")
+endif()
+
 # ## Shared common used code lib
 # # Place common used code here
 # add_library(common
@@ -39,6 +56,7 @@ add_executable(chat_server
     src/server/server_class.cpp
     src/server/session.cpp
     src/server/io_context_pool.cpp
+    src/server/io_thread_pool.cpp
 )
 
 # 包含头文件目录

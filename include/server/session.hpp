@@ -6,11 +6,8 @@
 #include <mutex>
 #include <stdexcept>
 
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/write.hpp>
-#include <boost/asio/read.hpp>
+#include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -26,7 +23,13 @@ using errcode = boost::system::error_code;
 class Session : public std::enable_shared_from_this<Session> {
 public:
     friend class Server;
-    Session(boost::asio::ip::tcp::socket&& sock, Server* srv) : sock_(std::move(sock)), srv_(srv), recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)) {
+    // 添加对strand的支持
+    Session(boost::asio::io_context& ctx, Server* srv) : 
+        sock_(ctx), 
+        srv_(srv), 
+        recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)), 
+        strand_(ctx.get_executor()) // strand保护在多个线程同时执行回调的情况下，不会并发调用回调
+        {
         // 创建UUID
         boost::uuids::uuid u = boost::uuids::random_generator()();
         uuid_ = boost::uuids::to_string(u);
@@ -90,8 +93,9 @@ public:
         };
     
         // 消息头部
-        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), cb);
-        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), cb);
+        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), 
+                            boost::asio::bind_executor(strand_, cb));
+        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), boost::asio::bind_executor(strand_, cb));
     }
 
     void ReceiveContent() {
@@ -119,8 +123,9 @@ public:
             }
         };
         // 消息体
-        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), cb);
-        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), cb);
+        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), 
+                            boost::asio::bind_executor(strand_, cb));
+        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), boost::asio::bind_executor(strand_, cb));
     }
 
     std::shared_ptr<MsgNode> GetRecvNode() {
@@ -163,6 +168,8 @@ private:
     bool down_{false};  // 该session被强制下线
     std::string uuid_;
     boost::asio::ip::tcp::socket sock_;
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+    
     Server* srv_;
 };
 
