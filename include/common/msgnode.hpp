@@ -12,6 +12,16 @@ const int LENGTH_LEN = 4;
 const int HEAD_LEN = TAG_LEN + LENGTH_LEN;
 const uint32_t MAX_CTX_LEN = 1024 * 1024;   // 消息长度上限，实际应用应该不会发送如此大的消息
 
+// 消息种类（Tag）
+enum {
+    UNKNOWN_MSG = 0,
+    TEXT_MSG,
+    HELLO_MSG,
+    ECHO_MSG,
+    PING_MSG,
+    PONG_MSG
+};
+
 // TODO(user): MsgNode可能需要分成RecvNode和SendNode？MsgNode同时用在发送和接收上语义有点不明
 
 // 会话层用来存储数据的MsgNode节点类

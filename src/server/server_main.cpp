@@ -2,9 +2,9 @@
 
 #include <boost/asio.hpp>
 
-#include "server_class.hpp"
-#include "session.hpp"
-#include "util_class.hpp"
+#include "server/server_class.hpp"
+#include "server/session.hpp"
+#include "utils/util_class.hpp"
 
 using namespace std;
 using namespace boost::asio;

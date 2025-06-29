@@ -15,7 +15,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "msgnode.hpp"
+#include "common/msgnode.hpp"
 
 constexpr size_t INITIAL_NODE_SIZE = 1024;
 

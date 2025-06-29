@@ -10,17 +10,12 @@
 #include <deque>
 #include <memory>
 
-#include "session.hpp"
-#include "util_class.hpp"
+#include "common/msgnode.hpp"
+#include "server/session.hpp"
+#include "utils/util_class.hpp"
 
-enum {
-    UNKNOWN_MSG = 0,
-    TEXT_MSG,
-    HELLO_MSG,
-    ECHO_MSG,
-    PING_MSG,
-    PONG_MSG
-};
+// LogicSys用于网络IO和逻辑处理解耦合
+// 其单独负责处理消息包的逻辑
 
 using CbSessType = std::shared_ptr<Session>;
 using RcvdMsgType = std::shared_ptr<MsgNode>; // ReceiveMsg

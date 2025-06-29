@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <memory>
 
-#include "logic.hpp"
-#include "session.hpp"
-#include "server_class.hpp"
+#include "server/logic.hpp"
+#include "server/session.hpp"
+#include "server/server_class.hpp"
 
 using namespace std;
 using namespace boost::asio;

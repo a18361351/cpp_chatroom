@@ -3,12 +3,10 @@
 #include <boost/asio.hpp>
 #include <memory>
 
-#include "session.hpp"
-#include "util_class.hpp"
-#include "msgnode.hpp"
+#include "utils/util_class.hpp"
+#include "common/msgnode.hpp"
 
-#include "logic.hpp"
-
+using errcode = boost::system::error_code;
 
 using namespace boost::asio;
 using namespace std;
@@ -20,7 +18,6 @@ public:
     // 启动连接
     void Start(ip::tcp::endpoint remote) {
         sock_.open(ip::tcp::v4());
-        errcode err;
         sock_.async_connect(remote, [self = shared_from_this()](const errcode& err) {
             self->ConnectedHandler();
             self->Receiver();
