@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <memory>
 
+#include "logic.hpp"
 #include "session.hpp"
 #include "server_class.hpp"
 
@@ -87,12 +88,18 @@ void Session::QueueSend()  {
 
 }
 
-void Session::ReceiveHandler(uint32_t content_len, uint32_t tag) {
-    // 将接收到的内容写入stdout
-    fwrite(recv_buf_.data_ + HEAD_LEN, 1, recv_buf_.ctx_len_,stdout);
-    fflush(stdout);
+// void Session::ReceiveHandler(uint32_t content_len, uint32_t tag) {
+//     // 将接收到的内容写入stdout
+//     fwrite(recv_buf_.data_ + HEAD_LEN, 1, recv_buf_.ctx_len_,stdout);
+//     fflush(stdout);
 
-    // 作为ECHO服务器把数据原封不动地发回去
-    shared_ptr<MsgNode> ptr = make_shared<MsgNode>(recv_buf_.data_ + HEAD_LEN, recv_buf_.ctx_len_);
-    Send(ptr);
+//     // 作为ECHO服务器把数据原封不动地发回去
+//     shared_ptr<MsgNode> ptr = make_shared<MsgNode>(recv_buf_.data_ + HEAD_LEN, recv_buf_.ctx_len_);
+//     Send(ptr);
+// }
+
+void Session::ReceiveHandler(uint32_t content_len, uint32_t tag) {
+    auto& logic = Singleton<LogicSys>::GetInstance();
+    logic.PostMsgToQueue(make_shared<LogicNode>(shared_from_this(), std::move(this->recv_ptr_)));
+    this->recv_ptr_ = make_shared<MsgNode>(INITIAL_NODE_SIZE);  // 发送完数据之后创建新节点
 }

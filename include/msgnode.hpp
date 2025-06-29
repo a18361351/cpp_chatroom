@@ -20,6 +20,7 @@ const uint32_t MAX_CTX_LEN = 1024 * 1024;   // 消息长度上限，实际应用
 class MsgNode {
     friend class Session;
     friend class ClientSession;
+    friend class AsyncClientSess;
 public:
     // Ctors
 
@@ -130,10 +131,14 @@ public:
 
     // 消息格式头部处理的函数
     
+    uint32_t GetContentLen() const {
+        return ctx_len_;
+    }
+
     // @brief 从接收到的消息头部中的内容长度字段获取消息内容的长度，保存至content_len并返回
     // @return 消息内容的长度，转换为主机字节序
     // @warning 该函数仅在已经完整接收到消息头部的情况下才能调用！即已接收的数据 >= HEAD_LEN 
-    uint32_t GetContentLenField() {
+    uint32_t UpdateContentLenField() {
         memcpy(&ctx_len_, data_ + TAG_LEN, LENGTH_LEN);
         ctx_len_ = ntohl(ctx_len_);
         return ctx_len_;
@@ -151,7 +156,7 @@ public:
     // @brief 获取消息头部中的Tag字段
     // @return 消息的tag，转换为主机字节序
     // @warning 该函数仅在已经完整接收到消息头部的情况下才能调用！即已接收的数据 >= HEAD_LEN
-    uint32_t GetTagField() {
+    uint32_t GetTagField() const {
         uint32_t tag;
         memcpy(&tag, data_, TAG_LEN);
         tag = ntohl(tag);
@@ -166,6 +171,10 @@ public:
     }
 
     char* GetContent() {
+        return data_ + HEAD_LEN;
+    }
+
+    const char* GetContent() const {
         return data_ + HEAD_LEN;
     }
 

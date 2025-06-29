@@ -17,6 +17,8 @@
 
 #include "msgnode.hpp"
 
+constexpr size_t INITIAL_NODE_SIZE = 1024;
+
 class Server;   // 需要Server这个类型
 
 using errcode = boost::system::error_code;
@@ -24,7 +26,7 @@ using errcode = boost::system::error_code;
 class Session : public std::enable_shared_from_this<Session> {
 public:
     friend class Server;
-    Session(boost::asio::ip::tcp::socket&& sock, Server* srv) : sock_(std::move(sock)), srv_(srv) {
+    Session(boost::asio::ip::tcp::socket&& sock, Server* srv) : sock_(std::move(sock)), srv_(srv), recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)) {
         // 创建UUID
         boost::uuids::uuid u = boost::uuids::random_generator()();
         uuid_ = boost::uuids::to_string(u);
@@ -46,9 +48,8 @@ public:
     // 该方法在整个消息被读取完整后被调用
     void ReceiveHandler(uint32_t content_len, uint32_t tag);
 
-    // TODO(user): Receiver可以分为头部和消息体部分接收两个函数
     void Receiver() {
-        if (recv_buf_.cur_pos_ < HEAD_LEN) {
+        if (recv_ptr_->cur_pos_ < HEAD_LEN) {
             ReceiveHead();
         } else {
             ReceiveContent();
@@ -66,20 +67,20 @@ public:
             fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
             fflush(stdout);
             // cur_pos更新
-            self->recv_buf_.cur_pos_ += bytes_rcvd;
-            if (self->recv_buf_.cur_pos_ >= HEAD_LEN) {
+            self->recv_ptr_->cur_pos_ += bytes_rcvd;
+            if (self->recv_ptr_->cur_pos_ >= HEAD_LEN) {
                 // 处理了报文长度部分
                 // 此时我们可以将ctx_len部分来获取出来了
 
-                uint32_t content_len = self->recv_buf_.GetContentLenField();
+                uint32_t content_len = self->recv_ptr_->UpdateContentLenField();
 
                 if (content_len > MAX_CTX_LEN) {
                     // 超出最大报文长度了！
                     self->sock_.close();
                     return;
                 }
-                if (content_len + HEAD_LEN > self->recv_buf_.max_len_) {
-                    self->recv_buf_.Reallocate(content_len + HEAD_LEN);
+                if (content_len + HEAD_LEN > self->recv_ptr_->max_len_) {
+                    self->recv_ptr_->Reallocate(content_len + HEAD_LEN);
                 }
                 self->ReceiveContent();
             } else {
@@ -89,8 +90,8 @@ public:
         };
     
         // 消息头部
-        sock_.async_receive(boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, HEAD_LEN - recv_buf_.cur_pos_), cb);
-        // boost::asio::async_read(sock_, boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, HEAD_LEN - recv_buf_.cur_pos_), cb);
+        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), cb);
+        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, HEAD_LEN - recv_ptr_->cur_pos_), cb);
     }
 
     void ReceiveContent() {
@@ -104,27 +105,31 @@ public:
             fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
             fflush(stdout);
             // cur_pos更新
-            self->recv_buf_.cur_pos_ += bytes_rcvd;
+            self->recv_ptr_->cur_pos_ += bytes_rcvd;
 
-            if (self->recv_buf_.cur_pos_ >= self->recv_buf_.ctx_len_ + HEAD_LEN) {
+            if (self->recv_ptr_->cur_pos_ >= self->recv_ptr_->ctx_len_ + HEAD_LEN) {
                 // 处理了一整个消息
-                uint32_t tag = self->recv_buf_.GetTagField();
-                self->ReceiveHandler(self->recv_buf_.ctx_len_, tag);
+                uint32_t tag = self->recv_ptr_->GetTagField();
+                self->ReceiveHandler(self->recv_ptr_->ctx_len_, tag);
                 // 处理完毕后清除缓冲区，准备下一次接收
-                self->recv_buf_.Zero();
+                self->recv_ptr_->Zero();
                 self->ReceiveHead();
             } else {
                 self->ReceiveContent();
             }
         };
         // 消息体
-        sock_.async_receive(boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, recv_buf_.ctx_len_ + HEAD_LEN - recv_buf_.cur_pos_), cb);
-        // boost::asio::async_read(sock_, boost::asio::buffer(recv_buf_.data_ + recv_buf_.cur_pos_, recv_buf_.ctx_len_ + HEAD_LEN - recv_buf_.cur_pos_), cb);
+        sock_.async_receive(boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), cb);
+        // boost::asio::async_read(sock_, boost::asio::buffer(recv_ptr_->data_ + recv_ptr_->cur_pos_, recv_ptr_->ctx_len_ + HEAD_LEN - recv_ptr_->cur_pos_), cb);
     }
 
+    std::shared_ptr<MsgNode> GetRecvNode() {
+        return recv_ptr_;
+    }
 
 private:
-    MsgNode recv_buf_{1024};
+    // MsgNode recv_buf_{1024};
+    std::shared_ptr<MsgNode> recv_ptr_;
     
     // -----------------------
 

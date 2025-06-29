@@ -3,6 +3,8 @@
 
 // 懒汉式单例实现
 // 使用时直接使用Singleton<Type>::GetInstance()即可
+// 如果Type类的构造函数是私有的，需要在类中加入:
+//  friend class Singleton<Type>;
 template <typename T>
 class Singleton {
 public:
