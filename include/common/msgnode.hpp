@@ -28,7 +28,7 @@ enum {
 // 在其中定义一个TLV协议格式：
 //  | Tag(4字节) | Len(4字节) | Content(Len字节) |
 class MsgNode {
-    friend class Session;
+    friend class Session;   // TODO(user): 把这些友元删掉，没有意义
     friend class ClientSession;
     friend class AsyncClientSess;
 public:
@@ -188,7 +188,12 @@ public:
         return data_ + HEAD_LEN;
     }
 
-private:
+    char* GetData() {
+        return data_;
+    }
+
+// private:
+public:
     char* data_;    // 包括tag, content_len, data的缓冲区，注意缓冲区中头部两变量为网络端字节序
     uint32_t cur_pos_;  // 当前读取/写入的位置（包括头部在内），用于读取（表示当前读取的位置）或写入（表示当前写入的位置）
     uint32_t ctx_len_;  // 内容的长度（不包括头部），注：这部分实际上也存储在格式头部中，但那部分是网络字节序的
