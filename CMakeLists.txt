@@ -75,6 +75,30 @@ target_link_libraries(chat_server
         # common
 )
 
+
+## HTTP Gateserver exec
+# 添加可执行目标
+add_executable(http_gate
+    src/http/http_server.cpp
+    src/http/req_handler.cpp
+)
+
+# 包含头文件目录
+target_include_directories(http_gate
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+    PUBLIC
+        ${Boost_INCLUDE_DIRS}
+)
+
+# 链接库
+target_link_libraries(http_gate
+    PRIVATE
+        Boost::system
+        # common
+)
+
+
 ## Client executable
 # 添加可执行目标
 add_executable(chat_client
@@ -95,6 +119,7 @@ target_link_libraries(chat_client
         Boost::system
         # common
 )
+
 
 ## Test programs
 # 添加可执行目标
