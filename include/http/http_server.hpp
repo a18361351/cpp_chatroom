@@ -9,20 +9,22 @@
 #include <memory>
 
 #include <boost/beast.hpp>
+#include <boost/asio.hpp>
 boost::beast::http::message_generator request_handler(boost::beast::http::request<boost::beast::http::string_body>&& req);
 
 
 class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
-public:
+    friend class HTTPServer;
+    public:
     // 启动一个HTTPConnection的执行
     void start() {
         read_request();
-        check_deadline();
+        // check_deadline();
     }
 
     void read_request();
     void send_response(boost::beast::http::message_generator&& msg);
-    void check_deadline();
+    // void check_deadline();
     
     // 关闭一个HTTPConnection的连接
     void close() {
@@ -30,152 +32,71 @@ public:
         boost::beast::error_code ec;
         sock_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
     }
-private:
+    
+    // Ctors
+    HTTPConnection(boost::asio::io_context& ctx) :
+        sock_(ctx) {
+
+    }
+
+    private:
     boost::beast::tcp_stream sock_;
     boost::beast::flat_buffer buf_{8192};
     boost::beast::http::request<boost::beast::http::string_body> req_;
 };
 
-
-// 异步读取请求
-void HTTPConnection::read_request() {
-    // 回调
-    auto cb = [self = shared_from_this()](const boost::beast::error_code& err, std::size_t bytes) {
-        boost::ignore_unused(bytes);
+class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
+    public:
+    HTTPServer(boost::asio::io_context& ctx, boost::asio::ip::tcp::endpoint ep) :
+        ctx_(ctx), 
+        acc_(boost::asio::make_strand(ctx)) 
+        {
+        boost::system::error_code err;
+        // Open acceptor
+        acc_.open(ep.protocol(), err);
         if (err) {
-            if (err == boost::beast::http::error::end_of_stream) {
-                self->close();
-            } else {
-                // error!
-                fprintf(stderr, "HTTP read error: %s\n", err.message().c_str());
-                self->close();
+            throw std::runtime_error("Failed to open acceptor: " + err.message());
+        }
+        // soreuseaddr
+        acc_.set_option(boost::asio::socket_base::reuse_address(true), err);
+        if (err) {
+            throw std::runtime_error("Failed to set reuse_address: " + err.message());
+        }
+        // Bind
+        acc_.bind(ep, err);
+        if (err) {
+            throw std::runtime_error("Failed to bind acceptor: " + err.message());
+        }
+        // Start listening
+        acc_.listen(boost::asio::socket_base::max_listen_connections, err);
+        if (err) {
+            throw std::runtime_error("Failed to listen on acceptor: " + err.message());
+        }
+    }
+
+    // @brief 开始运行服务器，具体来说是开始接受新连接
+    void start() {
+        acceptor();
+    }
+
+    private:
+    void acceptor() {
+        std::shared_ptr<HTTPConnection> sess = std::make_shared<HTTPConnection>(ctx_);
+        auto cb = [sess, self = shared_from_this()](const boost::system::error_code& err) {
+            if (err) {
+                // tell that error!
+                fprintf(stderr, "HTTP acceptor received an error: %s\n", err.message().c_str());
+                return;
             }
-        }
-        self->send_response(request_handler(std::move(self->req_)));
-    };
-    // 清空请求体
-    req_ = {};
-
-    // 设置超时
-    sock_.expires_after(std::chrono::seconds(30));
-    
-    // 读取
-    boost::beast::http::async_read(sock_, buf_, req_, cb);
-}
-
-// 异步发送请求
-void HTTPConnection::send_response(boost::beast::http::message_generator&& msg) {
-    auto cb = [self = shared_from_this()](boost::beast::error_code err, std::size_t bytes) {
-        if (err) {
-            fprintf(stderr, "HTTP write error: %s\n", err.message().c_str());
-            self->close();
-            return;
-        }
-        self->read_request();
-    };
-    boost::beast::async_write(sock_, std::move(msg), cb);
-}
-
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-
-// 解析请求的部分
-boost::beast::http::message_generator request_handler(http::request<boost::beast::http::string_body>&& req) {
-    // Returns a bad request response
-    auto const bad_request =
-    [&req](beast::string_view why)
-    {
-        http::response<http::string_body> res{http::status::bad_request, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = std::string(why);
-        res.prepare_payload();
-        return res;
-    };
-
-    // Returns a not found response
-    auto const not_found =
-    [&req](beast::string_view target)
-    {
-        http::response<http::string_body> res{http::status::not_found, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = "The resource '" + std::string(target) + "' was not found.";
-        res.prepare_payload();
-        return res;
-    };
-
-    // Returns a server error response
-    auto const server_error =
-    [&req](beast::string_view what)
-    {
-        http::response<http::string_body> res{http::status::internal_server_error, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = "An error occurred: '" + std::string(what) + "'";
-        res.prepare_payload();
-        return res;
-    };
-
-    switch(req.method()) {
-        case http::verb::get:
-            return get_handler(std::move(req));
-            // break;
-        case http::verb::head:
-
-            break;
-        case http::verb::post:
-        
-            break;
-        default:
-            return bad_request("Unsupported HTTP-method for this server");
+            sess->start();
+            self->acceptor();
+        };
+        acc_.async_accept(sess->sock_.socket(), cb);        
     }
+    boost::asio::io_context& ctx_;
+    boost::asio::ip::tcp::acceptor acc_;
 
-}
+};
 
-http::response<http::string_body> get_handler(http::request<boost::beast::http::string_body>&& req) {
-    // TODO(user): 这些lambda应该是公用的……
-    // Returns a not found response
-    auto const not_found =
-    [&req](beast::string_view target)
-    {
-        http::response<http::string_body> res{http::status::not_found, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = "The resource '" + std::string(target) + "' was not found.";
-        res.prepare_payload();
-        return res;
-    };
-    // GET METHOD
-    http::response<http::string_body> resp;
-    if (req.target() == "/test") {
-        resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        resp.set(http::field::content_type, "text/html");
-        resp.keep_alive(req.keep_alive());
-        resp.body() = "Test";
-        resp.prepare_payload();
-        return resp;
-    } else if (req.target() == "/hello") {
-        resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        resp.set(http::field::content_type, "text/html");
-        resp.keep_alive(req.keep_alive());
-        resp.body() = "Hello World!";
-        resp.prepare_payload();
-        return resp;
-    } else {
-        return not_found(req.target());
-    }
-}
-
-// TODO(user): 可以把处理请求的逻辑分离出来
-
-void http_server() {
-    // TODO(user): 补充启动时的源码
-}
 
 #endif
