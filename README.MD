@@ -19,9 +19,18 @@
 - o 服务器基本功能
     - o 逻辑系统
     - o 高性能：多线程处理
+    - × ...
 - × 分布式管理
+    - 网关服务器
+    - 负载均衡
 - × 消息持久化
 - × ...
+
+# 架构设计
+参考了[恋恋风尘](https://llfc.club/category?catid=225RaiVNI8pFDD5L4m807g7ZwmF#!aid/2eIZbBf2pkVGQG1oPdRLDtTDLo0)的服务器架构设计：
+- GateServer: 网关服务
+- VerifyServer
+- StatusServer
 
 # 参考
 [恋恋风尘官方博客C++部分](https://llfc.club/category?catid=225RaiVNI8pFDD5L4m807g7ZwmF)

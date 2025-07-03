@@ -57,6 +57,7 @@ add_executable(chat_server
     src/server/session.cpp
     src/server/io_context_pool.cpp
     src/server/io_thread_pool.cpp
+    src/server/logic.cpp
 )
 
 # 包含头文件目录

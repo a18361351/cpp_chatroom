@@ -62,9 +62,12 @@ public:
     void ReceiveHead() {
         auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
             if (err) {
+                if (err == boost::asio::error::eof) {
+                    printf("Remote closing\n");
+                    return;
+                }
                 // tell that error!
-                fprintf(stdout, "Receiver() received an error! %s\n", err.what().c_str());
-                fflush(stdout);
+                fprintf(stderr, "Receiver() received an error! %s\n", err.what().c_str());
                 return;
             }
             // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
@@ -101,9 +104,12 @@ public:
     void ReceiveContent() {
         auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
             if (err) {
+                if (err == boost::asio::error::eof) {
+                    printf("Remote closing\n");
+                    return;
+                }
                 // tell that error!
-                fprintf(stdout, "Receiver() received an error! %s\n", err.what().c_str());
-                fflush(stdout);
+                fprintf(stderr, "Receiver() received an error! %s\n", err.what().c_str());
                 return;
             }
             // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);

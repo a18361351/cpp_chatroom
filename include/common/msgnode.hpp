@@ -141,6 +141,8 @@ public:
 
     // 消息格式头部处理的函数
     
+    // @brief 返回内容的长度，需要事先调用UpdateContentLenField()
+    // @ return 消息内容的长度，转换为主机序字节
     uint32_t GetContentLen() const {
         return ctx_len_;
     }
