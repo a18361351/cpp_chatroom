@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(NetChatRoom VERSION 1.0.0 LANGUAGES CXX)
+project(NetChatRoom VERSION 0.0.0 LANGUAGES CXX)
 
 # Export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -9,9 +9,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Jsoncpp required
+find_package(jsoncpp REQUIRED)
+
 # Boost required
 find_package(Boost 1.81 REQUIRED COMPONENTS system coroutine)
 
+
+# IOContextPool/ThreadPool options
 option(USE_IOCONTEXT_POOL "Use IOContext Pool implementation" OFF)
 option(USE_IOTHREAD_POOL "Use Thread Pool implementation" OFF)
 
@@ -95,6 +100,7 @@ target_include_directories(http_gate
 target_link_libraries(http_gate
     PRIVATE
         Boost::system
+        jsoncpp_lib     # Jsoncpp
         # common
 )
 
