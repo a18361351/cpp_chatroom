@@ -1,6 +1,9 @@
 #ifndef LOGIC_HEADER
 #define LOGIC_HEADER
 
+// LogicSys用于网络IO和逻辑处理解耦合
+// 其单独负责处理消息包的逻辑
+
 #include <condition_variable>
 #include <queue>
 #include <cstdint>
@@ -14,8 +17,6 @@
 #include "server/session.hpp"
 #include "utils/util_class.hpp"
 
-// LogicSys用于网络IO和逻辑处理解耦合
-// 其单独负责处理消息包的逻辑
 
 using CbSessType = std::shared_ptr<Session>;
 using RcvdMsgType = std::shared_ptr<MsgNode>; // ReceiveMsg

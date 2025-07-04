@@ -15,6 +15,16 @@ find_package(jsoncpp REQUIRED)
 # Boost required
 find_package(Boost 1.81 REQUIRED COMPONENTS system coroutine)
 
+# hiredis required
+# find_path(HIREDIS_HEADER hiredis)
+# find_library(HIREDIS_LIB hiredis)
+find_package(hiredis REQUIRED)
+
+# redis++ required
+# find_path(REDIS_PLUS_PLUS_HEADER sw)
+# find_library(REDIS_PLUS_PLUS_LIB redis++)
+find_package(redis++ REQUIRED)
+
 
 # IOContextPool/ThreadPool options
 option(USE_IOCONTEXT_POOL "Use IOContext Pool implementation" OFF)
@@ -69,15 +79,20 @@ add_executable(chat_server
 target_include_directories(chat_server
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
-    PUBLIC
+        # boost
         ${Boost_INCLUDE_DIRS}
+        # Redis++ support
+        ${HIREDIS_HEADER}
+        ${REDIS_PLUS_PLUS_HEADER}
 )
 
 # 链接库
 target_link_libraries(chat_server
     PRIVATE
         Boost::system
-        # common
+        # Redis++ support
+        ${HIREDIS_LIB}
+        ${REDIS_PLUS_PLUS_LIB}
 )
 
 
@@ -100,8 +115,8 @@ target_include_directories(http_gate
 target_link_libraries(http_gate
     PRIVATE
         Boost::system
-        jsoncpp_lib     # Jsoncpp
-        # common
+        # Jsoncpp support
+        jsoncpp_lib     
 )
 
 

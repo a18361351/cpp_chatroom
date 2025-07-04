@@ -1,5 +1,8 @@
-#ifndef SESSION_HEADER
-#define SESSION_HEADER
+#ifndef SERVER_SESSION_HEADER
+#define SERVER_SESSION_HEADER
+
+// 后台服务器管理的与客户端连接的会话（Session）类
+// Session对象通过shared_from_this维护自己的生命周期，同时持有Server*指针
 
 #include <memory>
 #include <deque>
@@ -70,8 +73,6 @@ public:
                 fprintf(stderr, "Receiver() received an error! %s\n", err.what().c_str());
                 return;
             }
-            // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
-            // fflush(stdout);
             // cur_pos更新
             self->recv_ptr_->cur_pos_ += bytes_rcvd;
             if (self->recv_ptr_->cur_pos_ >= HEAD_LEN) {
@@ -112,8 +113,6 @@ public:
                 fprintf(stderr, "Receiver() received an error! %s\n", err.what().c_str());
                 return;
             }
-            // fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
-            // fflush(stdout);
             // cur_pos更新
             self->recv_ptr_->cur_pos_ += bytes_rcvd;
 

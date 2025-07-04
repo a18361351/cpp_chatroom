@@ -1,6 +1,8 @@
 #ifndef SERVER_CLASS_HEADER
 #define SERVER_CLASS_HEADER
 
+// 后台服务器类型Server的声明头文件
+
 #include <unordered_map>
 
 #ifdef USING_IOCONTEXT_POOL

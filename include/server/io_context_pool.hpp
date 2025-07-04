@@ -1,12 +1,13 @@
 #ifndef IO_CONTEXT_POOL_HEADER
 #define IO_CONTEXT_POOL_HEADER
 
+// IOContextPool是一种每个线程自己管理自己的IOContext的多线程模式
+// 多分发器多线程
+// 在CMake中打开USE_IOCONTEXT_POOL选项后启用
+
 #include <boost/asio.hpp>
 
 #include "utils/util_class.hpp"
-
-// IOContextPool是一种每个线程自己管理自己的IOContext的多线程模式
-// 多分发器多线程
 
 class IOContextPool : public Noncopyable {
     friend class Singleton<IOContextPool>;

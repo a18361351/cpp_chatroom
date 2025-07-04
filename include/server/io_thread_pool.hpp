@@ -1,11 +1,13 @@
 #ifndef IO_THREAD_POOL_HEADER
 #define IO_THREAD_POOL_HEADER
 
+// IOThreadPool是多个线程调用单个io_context.run()的模型
+// 单分发器多线程
+// 在CMake中打开USE_IOTHREAD_POOL选项后启用
+
 #include "utils/util_class.hpp"
 #include <boost/asio.hpp>
 
-// 多个线程调用单个io_context.run()的模型
-// 单分发器多线程
 
 class IOThreadPool : public Noncopyable {
     friend class Singleton<IOThreadPool>;
