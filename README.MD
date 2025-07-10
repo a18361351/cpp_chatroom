@@ -4,6 +4,13 @@
 期望能写出稳定、高效的服务端；同时支持分布式系统+文件传输+聊天记录持久化！
 
 # 使用
+本项目用到的其他库和前置工程：<br>
+[Boost 1.82+](https://www.boost.org/releases/latest/) <br>
+[jsoncpp](https://github.com/open-source-parsers/jsoncpp) <br>
+[hiredis](https://github.com/redis/hiredis) <br>
+[redis++](https://github.com/sewenew/redis-plus-plus) <br>
+[grpc](https://github.com/grpc/grpc/) <br>
+
 编译本项目，使用：
 ```bash
 ./build.sh
