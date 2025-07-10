@@ -9,11 +9,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+## Dependency
+# Boost required
+find_package(Boost 1.82 REQUIRED COMPONENTS system coroutine headers)
+
 # Jsoncpp required
 find_package(jsoncpp REQUIRED)
 
-# Boost required
-find_package(Boost 1.81 REQUIRED COMPONENTS system coroutine)
+# Boost.mysql required
+find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # hiredis required
 # find_path(HIREDIS_HEADER hiredis)
@@ -24,6 +29,13 @@ find_package(hiredis REQUIRED)
 # find_path(REDIS_PLUS_PLUS_HEADER sw)
 # find_library(REDIS_PLUS_PLUS_LIB redis++)
 find_package(redis++ REQUIRED)
+
+# grpc required
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(protobuf CONFIG REQUIRED)
+message(STATUS "Protobuf version: ${protobuf_VERSION}")
+
+find_package(gRPC CONFIG REQUIRED)
 
 
 # IOContextPool/ThreadPool options
@@ -84,6 +96,8 @@ target_include_directories(chat_server
         # Redis++ support
         ${HIREDIS_HEADER}
         ${REDIS_PLUS_PLUS_HEADER}
+        # Boost.mysql support
+        
 )
 
 # 链接库
@@ -93,6 +107,10 @@ target_link_libraries(chat_server
         # Redis++ support
         ${HIREDIS_LIB}
         ${REDIS_PLUS_PLUS_LIB}
+        # Boost.mysql support
+        Threads::Threads
+        OpenSSL::Crypto
+        OpenSSL::SSL
 )
 
 
@@ -148,22 +166,62 @@ add_executable(concurrent_test EXCLUDE_FROM_ALL
     test/concurrent_test.cpp
 )
 
-# 设置输出目录为 build/test
-set_target_properties(concurrent_test PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test
-)
-
 # 包含头文件目录
 target_include_directories(concurrent_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-    PUBLIC
-        ${Boost_INCLUDE_DIRS}
+PRIVATE
+${CMAKE_SOURCE_DIR}/include
+PUBLIC
+${Boost_INCLUDE_DIRS}
 )
 
 # 链接库
 target_link_libraries(concurrent_test
-    PRIVATE
-        Boost::system
-        # common
+PRIVATE
+Boost::system
+# common
+)
+
+
+# 添加可执行目标
+add_executable(grpc_test_srv EXCLUDE_FROM_ALL
+    test/lib_example/grpc_test/demo.grpc.pb.cc
+    test/lib_example/grpc_test/demo.pb.cc
+    test/lib_example/grpc_test/grpc_test.cpp
+)
+add_executable(grpc_test_cli EXCLUDE_FROM_ALL
+    test/lib_example/grpc_test/demo.grpc.pb.cc
+    test/lib_example/grpc_test/demo.pb.cc
+    test/lib_example/grpc_test/grpc_test_cli.cpp
+)
+
+# 包含头文件目录
+target_include_directories(grpc_test_srv
+PRIVATE
+${CMAKE_SOURCE_DIR}/include
+PUBLIC
+${Boost_INCLUDE_DIRS}
+)
+target_include_directories(grpc_test_cli
+PRIVATE
+${CMAKE_SOURCE_DIR}/include
+PUBLIC
+${Boost_INCLUDE_DIRS}
+)
+
+# 链接库
+target_link_libraries(grpc_test_srv
+PRIVATE
+Boost::system
+gRPC::grpc++
+)
+target_link_libraries(grpc_test_cli
+PRIVATE
+Boost::system
+gRPC::grpc++
+)
+
+
+# 设置输出目录为 build/test
+set_target_properties(concurrent_test grpc_test_srv grpc_test_cli PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test
 )
