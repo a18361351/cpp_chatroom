@@ -1,7 +1,8 @@
 #ifndef HTTP_SERVER_HEADER
 #define HTTP_SERVER_HEADER
 
-// http网关源码大幅参考了以下资料：
+// http网关源码负责登录验证+负载均衡
+// 大幅参考了以下资料：
 // https://www.boost.org/doc/libs/latest/libs/beast/doc/html/beast/examples.html#beast.examples.servers
 // https://llfc.club/category?catid=225RaiVNI8pFDD5L4m807g7ZwmF#!aid/2RlhDCg4eedYme46C6ddo4cKcFN
 
@@ -10,8 +11,10 @@
 
 #include <boost/beast.hpp>
 #include <boost/asio.hpp>
-boost::beast::http::message_generator request_handler(boost::beast::http::request<boost::beast::http::string_body>&& req);
 
+#include "http/req_handler.hpp"
+
+boost::beast::http::message_generator request_handler(boost::beast::http::request<boost::beast::http::string_body>&& req);
 
 class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
     friend class HTTPServer;
@@ -43,14 +46,15 @@ class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
     boost::beast::tcp_stream sock_;
     boost::beast::flat_buffer buf_{8192};
     boost::beast::http::request<boost::beast::http::string_body> req_;
+    std::shared_ptr<ReqHandler> handler_;
 };
 
 class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
     public:
-    HTTPServer(boost::asio::io_context& ctx, boost::asio::ip::tcp::endpoint ep) :
-        ctx_(ctx), 
-        acc_(boost::asio::make_strand(ctx)) 
-        {
+    HTTPServer(boost::asio::io_context& ctx, boost::asio::ip::tcp::endpoint ep, std::shared_ptr<DBM> dbm) :
+               ctx_(ctx), 
+               acc_(boost::asio::make_strand(ctx)),
+               req_handler_(std::make_shared<ReqHandler>(std::move(dbm))) {
         boost::system::error_code err;
         // Open acceptor
         acc_.open(ep.protocol(), err);
@@ -75,8 +79,15 @@ class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
     }
 
     // @brief 开始运行服务器，具体来说是开始接受新连接
-    void start() {
+    void Start() {
         acceptor();
+        
+    }
+
+    // @brief 停止服务器运行，关闭监听端口
+    void Stop() {
+        acc_.close();
+        // FIXME(user): 现有的连接怎么关闭？
     }
 
     private:
@@ -95,7 +106,7 @@ class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
     }
     boost::asio::io_context& ctx_;
     boost::asio::ip::tcp::acceptor acc_;
-
+    std::shared_ptr<ReqHandler> req_handler_;
 };
 
 

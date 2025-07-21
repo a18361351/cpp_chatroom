@@ -10,6 +10,7 @@
 [hiredis](https://github.com/redis/hiredis) <br>
 [redis++](https://github.com/sewenew/redis-plus-plus) <br>
 [grpc](https://github.com/grpc/grpc/) <br>
+[spdlog](https://github.com/gabime/spdlog/releases/tag/v1.15.3) <br>
 
 编译本项目，使用：
 ```bash
@@ -28,16 +29,20 @@
     - o 高性能：多线程处理
     - × ...
 - × 分布式管理
-    - 网关服务器
-    - 负载均衡
+    - × 网关服务器：负责登录验证+负载均衡
 - × 消息持久化
 - × ...
 
 # 架构设计
 参考了[恋恋风尘](https://llfc.club/category?catid=225RaiVNI8pFDD5L4m807g7ZwmF#!aid/2eIZbBf2pkVGQG1oPdRLDtTDLo0)的服务器架构设计：
-- GateServer: 网关服务
-- VerifyServer
-- StatusServer
+- 前台：
+    - GateServer: 通过boost.beast的http服务器实现负载均衡+登录验证
+- 缓存：
+    - Redis层：存储当前用户登录状态+已连接到的服务器
+- 后台：
+    - Backend：通过boost.asio实现的后台服务器
+- 数据库：
+    - Mysql：存储用户的个人资料+登录验证所需的信息
 
 # 参考
 [恋恋风尘官方博客C++部分](https://llfc.club/category?catid=225RaiVNI8pFDD5L4m807g7ZwmF)

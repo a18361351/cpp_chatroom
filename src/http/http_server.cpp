@@ -1,5 +1,8 @@
+
+#include "log/log_manager.hpp"
 #include "http/http_server.hpp"
 #include "http/req_handler.hpp"
+
 
 using namespace std;
 using namespace boost::asio;
@@ -19,7 +22,14 @@ void HTTPConnection::read_request() {
             }
             return;
         }
-        self->send_response(request_handler(std::move(self->req_)));
+
+        // 回调嵌回调……
+        // TODO(user): 改用协程
+        auto send_cb = [self] (boost::beast::http::message_generator &&msg, bool) -> bool {
+            self->send_response(std::move(msg));
+            return true;
+        };
+        self->handler_->PostRequest(std::move(self->req_), send_cb);
     };
     // 清空请求体
     req_ = {};
@@ -42,14 +52,4 @@ void HTTPConnection::send_response(boost::beast::http::message_generator&& msg) 
         self->read_request();
     };
     boost::beast::async_write(sock_, std::move(msg), cb);
-}
-
-int main() {
-    io_context ctx;
-    ip::tcp::endpoint ep(ip::tcp::v4(), 1235);
-    auto srv = make_shared<HTTPServer>(ctx, ep);
-
-    srv->start();
-
-    ctx.run();
 }

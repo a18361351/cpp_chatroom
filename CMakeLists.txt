@@ -4,7 +4,7 @@ project(NetChatRoom VERSION 0.0.0 LANGUAGES CXX)
 # Export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++20
+# C++20，因为在未来可能用到协程
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -34,8 +34,12 @@ find_package(redis++ REQUIRED)
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(protobuf CONFIG REQUIRED)
 message(STATUS "Protobuf version: ${protobuf_VERSION}")
-
 find_package(gRPC CONFIG REQUIRED)
+
+# spdlog required
+find_package(spdlog REQUIRED)
+# target_link_libraries(my_project PRIVATE spdlog::spdlog)
+
 
 
 # IOContextPool/ThreadPool options
@@ -117,6 +121,10 @@ target_link_libraries(chat_server
 ## HTTP Gateserver exec
 # 添加可执行目标
 add_executable(http_gate
+    src/http/dbm/dbconn.cpp 
+    src/http/dbm/gateway_dbm.cpp 
+    src/http/gateway_class.cpp 
+    src/http/gateway_main.cpp 
     src/http/http_server.cpp
     src/http/req_handler.cpp
 )
@@ -134,7 +142,7 @@ target_link_libraries(http_gate
     PRIVATE
         Boost::system
         # Jsoncpp support
-        jsoncpp_lib     
+        jsoncpp_lib
 )
 
 
