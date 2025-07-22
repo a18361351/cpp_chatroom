@@ -3,7 +3,9 @@
 
 #include <string_view>
 
-#include <boost/mysql.hpp>
+// #include <boost/mysql.hpp>
+#include <boost/mysql/statement.hpp>
+#include <boost/mysql/tcp.hpp>
 
 #include "log/log_manager.hpp"
 #include "utils/util_class.hpp"

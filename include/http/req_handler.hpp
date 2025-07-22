@@ -3,7 +3,11 @@
 
 #include <memory>
 
-#include <boost/beast.hpp>
+#include <boost/asio/thread_pool.hpp>
+// #include <boost/beast.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/beast/http/message_generator.hpp>
+#include <boost/beast/http/string_body.hpp>
 
 #include "log/log_manager.hpp"
 #include "http/dbm/gateway_dbm.hpp"
@@ -29,7 +33,7 @@ class ReqHandler : public std::enable_shared_from_this<ReqHandler> {
     
     // 通过异步的线程池，解耦分离请求发送接收和请求处理部分
     void PostRequest(boost::beast::http::request<boost::beast::http::string_body>&& req, RespCallback cb) {
-        boost::asio::post(pool_, [self = shared_from_this(), &req, &cb]() {
+        boost::asio::post(pool_, [self = shared_from_this(), req = std::move(req), cb = std::move(cb)]() mutable {
             [[maybe_unused]]bool ret = cb(self->request_handler(std::move(req)), false);
         });
     }

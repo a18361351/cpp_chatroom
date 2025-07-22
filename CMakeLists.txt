@@ -123,7 +123,8 @@ target_link_libraries(chat_server
 add_executable(http_gate
     src/http/dbm/dbconn.cpp 
     src/http/dbm/gateway_dbm.cpp 
-    src/http/gateway_class.cpp 
+    src/http/dbm/security.cpp 
+    src/http/gateway_class.cpp
     src/http/gateway_main.cpp 
     src/http/http_server.cpp
     src/http/req_handler.cpp
@@ -143,6 +144,10 @@ target_link_libraries(http_gate
         Boost::system
         # Jsoncpp support
         jsoncpp_lib
+        Threads::Threads
+        OpenSSL::Crypto
+        OpenSSL::SSL
+        spdlog::spdlog
 )
 
 

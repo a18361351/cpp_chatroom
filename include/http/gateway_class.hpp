@@ -3,16 +3,8 @@
 
 // gateway_class: 负责实际进行网关的职责：登陆验证+负载均衡
 //  登陆验证中，我们使用了OpenSSL加密套件中的PBKDF2加密
-#include <iterator>
-#include <queue>
-#include <stdexcept>
-#include <string>
-#include <string_view>
 
-#include <boost/asio.hpp>
-#include <boost/mysql.hpp>
-#include <boost/algorithm/hex.hpp>
-#include <openssl/crypto.h>
+#include <boost/asio/io_context.hpp>
 
 #include "utils/util_class.hpp"
 #include "http/dbm/gateway_dbm.hpp"
@@ -26,12 +18,12 @@ const std::string password = "123456";
 const std::string db_name = "chat";
 
 // 网关服务器的一个实例
-class GatewayClass /* 或者GatewayApp */ {
+class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
     public:
     void run(uint db_conn);
     GatewayClass(boost::asio::io_context& http_ctx, boost::asio::ip::tcp::endpoint http_ep) : http_ctx_(http_ctx)
         , dbm_(std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port))
-        , http_(http_ctx_, http_ep, dbm_)
+        , http_(std::make_shared<HTTPServer>(http_ctx_, http_ep, dbm_))
     {
 
     }
@@ -43,7 +35,7 @@ class GatewayClass /* 或者GatewayApp */ {
     std::shared_ptr<DBM> dbm_;
 
     // HTTP server
-    HTTPServer http_;
+    std::shared_ptr<HTTPServer> http_;
 
 };
 
