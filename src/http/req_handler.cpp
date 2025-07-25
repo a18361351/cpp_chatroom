@@ -48,6 +48,8 @@ boost::beast::http::message_generator ReqHandler::post_handler(http::request<boo
         switch (db_ret) {
             case GATEWAY_SUCCESS:
                 // TODO(user): 未来进行负载均衡，告诉用户其token以及服务器ip地址，但是这里我们先进行登录的测试吧……一步一步来
+                // TODO(user): 限流器
+                // TODO(user): 返回json格式
                 resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 resp.set(http::field::content_type, "text/html");
                 resp.result(http::status::ok);
