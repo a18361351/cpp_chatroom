@@ -95,6 +95,7 @@ add_executable(chat_server
 target_include_directories(chat_server
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/proto
         # boost
         ${Boost_INCLUDE_DIRS}
         # Redis++ support
@@ -117,7 +118,6 @@ target_link_libraries(chat_server
         OpenSSL::SSL
 )
 
-
 ## HTTP Gateserver exec
 # 添加可执行目标
 add_executable(http_gate
@@ -134,6 +134,7 @@ add_executable(http_gate
 target_include_directories(http_gate
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/proto
     PUBLIC
         ${Boost_INCLUDE_DIRS}
 )
@@ -150,6 +151,34 @@ target_link_libraries(http_gate
         spdlog::spdlog
 )
 
+## Status server exec
+# 添加可执行目标
+add_executable(status_server
+    src/status/status_class.cpp
+    src/status/status_main.cpp
+
+)
+
+# 包含头文件目录
+target_include_directories(status_server
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/proto
+    PUBLIC
+        ${Boost_INCLUDE_DIRS}
+)
+
+# 链接库
+target_link_libraries(status_server
+    PRIVATE
+        Boost::system
+        # Jsoncpp support
+        jsoncpp_lib
+        Threads::Threads
+        OpenSSL::Crypto
+        OpenSSL::SSL
+        spdlog::spdlog
+)
 
 ## Client executable
 # 添加可执行目标
