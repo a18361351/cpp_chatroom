@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 
 
 include(FetchContent)
+message("Fetching GoogleTest...")
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
@@ -15,7 +16,7 @@ enable_testing()
 ## Test programs
 # 添加可执行目标
 add_executable(test_load_balancer_1 EXCLUDE_FROM_ALL
-    ${CMAKE_SOURCE_DIR}/test/status/load_balancer_test.cpp
+    status/load_balancer_test.cpp
 )
 
 # 包含头文件目录
