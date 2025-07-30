@@ -5,3 +5,7 @@ build/
 
 # VSCode configs
 .vscode
+
+# protobuf outputs
+*.pb.cc
+*.pb.h

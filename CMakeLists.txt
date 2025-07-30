@@ -1,8 +1,11 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(NetChatRoom VERSION 0.0.0 LANGUAGES CXX)
 
 # Export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# 设置输出目录
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # C++20，因为在未来可能用到协程
 set(CMAKE_CXX_STANDARD 20)
@@ -60,23 +63,7 @@ else()
     message(STATUS "Using default single-threaded implementation.")
 endif()
 
-# ## Shared common used code lib
-# # Place common used code here
-# add_library(common
-#     src/server/session.cpp
-# )
 
-# # 包含头文件目录
-# target_include_directories(common
-#     PUBLIC
-#         ${CMAKE_SOURCE_DIR}/include
-#         ${Boost_INCLUDE_DIRS}
-# )
-
-# # 链接库
-# target_link_libraries(common
-#     PUBLIC
-#         Boost::system
-# )
 add_subdirectory(src)
+add_subdirectory(proto)
 add_subdirectory(test)
