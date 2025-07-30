@@ -11,8 +11,10 @@
 #include "protocpp/status.pb.h"
 
 #include "status/redis/status_redis.hpp"
+#include "status/load_balancer.hpp"
 
 namespace chatroom {
+    // FIXME(user): complete everything
     class StatusRPCManager {
         private:
         class CallData {
@@ -41,7 +43,13 @@ namespace chatroom {
             grpc::Status ReportServerLoad(grpc::ServerContext* ctx, const StatusReportReq* request, GeneralResp* response) override {
                 auto srv = request->server_id();
                 auto load = request->load();
-                
+                bool ret = load_balancer_->UpdateServerLoad(srv, load);
+                if (ret) {
+                    response->set_ret(0);
+                } else {
+                    response->set_ret(1); // 更新失败
+                }
+                return grpc::Status::OK;
             }
             grpc::Status CheckUserOnline(grpc::ServerContext* context, const UserCheckReq* request, GeneralResp* response) override {
                 
@@ -58,9 +66,10 @@ namespace chatroom {
             }
             private:
             std::shared_ptr<StatusRedisMgr> redis_mgr_;
+            LoadBalancer* load_balancer_;
         };
         StatusServiceImpl rpc_service_;
-
+        LoadBalancer* load_balancer_;   // 不负责其生命周期管理
         public:
         void Run() {
             
@@ -70,9 +79,33 @@ namespace chatroom {
 
 
     class StatusServer {
+        private:
         StatusRPCManager rpc_;
-        StatusRedisMgr redis_mgr_;
-        
+        std::shared_ptr<sw::redis::Redis> redis_obj_;
+        std::unique_ptr<StatusRedisMgr> redis_mgr_;
+        std::unique_ptr<LoadBalancer> load_balancer_;
+        bool running_;
+        public:
+        bool RunStatusServer() {
+            if (!running_) {
+                // Load balancer initialize
+                load_balancer_ = std::make_unique<LoadBalancer>();
+
+                // redis connection initialize
+                redis_obj_ = std::make_shared<sw::redis::Redis>();
+                redis_mgr_ = std::make_unique<StatusRedisMgr>(redis_obj_);
+
+                rpc_.Run();
+                return true;
+            }
+            return false;
+        }
+        void StopStatusServer() {
+            if (running_) {
+                rpc_.Stop();
+                load_balancer_.reset();
+            }
+        }
     };
 }
 

@@ -7,8 +7,22 @@ message StatusReportReq {
     uint32 server_id = 1;
     uint32 load = 2;
     // 以下两个字段状态服务器会忽略，但未来可能用上
-    uint32 cpu_usage = 3;
-    uint32 mem_usage = 4;
+    // uint32 cpu_usage = 3;
+    // uint32 mem_usage = 4;
+    reserved 3 to 4;
+}
+
+message ServerRegisterReq {
+    uint32 server_id = 1;
+    string server_addr = 2;
+    uint32 load = 3;
+};
+
+// 对网关：踢掉在线用户的报文
+message KickRequest {
+    string user_id = 1;  // 用户ID
+    uint32 server_id = 2;  // 服务器ID
+    string reason = 3;  // 踢掉用户的原因
 }
 
 // 对网关：检查用户是否在线的报文
@@ -28,7 +42,7 @@ message ServerAddrResp {
 
 // RPC调用的通用响应报文
 message GeneralResp {
-    uint32 ret = 1;
+    uint32 ret = 1; // 0 - 成功，非0 - 失败，未来可用作错误码
 }
 
 // 状态服务器的rpc接口定义
@@ -36,4 +50,6 @@ service StatusService {
     rpc ReportServerLoad (StatusReportReq) returns (GeneralResp) {}
     rpc CheckUserOnline (UserCheckReq) returns (GeneralResp) {}
     rpc CheckMinimalLoadServer (MinimalLoadServerReq) returns (ServerAddrResp) {}
+    rpc RegisterServer (ServerRegisterReq) returns (GeneralResp) {}
+    rpc KickOnlineUser (KickRequest) returns (GeneralResp) {}
 }

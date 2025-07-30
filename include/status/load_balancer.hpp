@@ -195,8 +195,11 @@ namespace chatroom {
         return lhs->load > rhs->load;
     }
 
-    class LoadBalancer {
+    class LoadBalancer : public Noncopyable {
         public:
+        // @brief 默认构造函数
+        LoadBalancer() = default;
+
         // @brief 服务器更新负载
         bool UpdateServerLoad(uint32_t id, uint32_t load) {
             auto it = hm_.find(id);

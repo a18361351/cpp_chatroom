@@ -3,6 +3,7 @@
 
 // status_redis: 将redis对象和业务对象封装在一起，提供简化的接口
 #include <iterator>
+#include <stdexcept>
 #include <sw/redis++/command_options.h>
 #include <sw/redis++/redis.h>
 #include <boost/asio/thread_pool.hpp>
@@ -76,7 +77,7 @@ class StatusRedisMgr {
     }
 
     void UpdateServerLoad(uint32_t server_id, uint32_t load) {
-        redis_->zadd(SERVER_LOAD, )
+        throw std::logic_error("UpdateServerLoad() Not implemented");
     }
 };
 
