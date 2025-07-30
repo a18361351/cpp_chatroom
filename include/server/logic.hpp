@@ -12,6 +12,7 @@
 #include <mutex>
 #include <deque>
 #include <memory>
+#include <utility>
 
 #include "common/msgnode.hpp"
 #include "server/session.hpp"
@@ -33,7 +34,7 @@ public:
     // LogicNode(CbSessType sess) : sess_(std::move(sess)), msg_(sess_->GetRecvNode()) {}
 
     LogicNode(CbSessType sess, RcvdMsgType msg) 
-        : sess_(std::move(sess)), msg_(msg) {}
+        : sess_(std::move(sess)), msg_(std::move(msg)) {}
 private:
     CbSessType sess_; // LogicNode包含了Session的智能指针，防止其被释放
     RcvdMsgType msg_;                  // 接收的MsgNode的指针
@@ -75,9 +76,18 @@ private:
     // 创建回调
     void RegisterCallbacks() {
         using namespace std::placeholders;
-        cbs_[HELLO_MSG] = std::bind(&LogicSys::WelcomeMsgCallback, this, _1, _2);
-        cbs_[TEXT_MSG] = std::bind(&LogicSys::TextMsgCallback, this, _1, _2);
-        cbs_[ECHO_MSG] = std::bind(&LogicSys::EchoMsgCallback, this, _1, _2);
+        // cbs_[HELLO_MSG] = std::bind(&LogicSys::WelcomeMsgCallback, this, _1, _2);
+        // cbs_[TEXT_MSG] = std::bind(&LogicSys::TextMsgCallback, this, _1, _2);
+        // cbs_[ECHO_MSG] = std::bind(&LogicSys::EchoMsgCallback, this, _1, _2);
+        cbs_[HELLO_MSG] = [this](CbSessType sess, RcvdMsgType msg) {
+            this->WelcomeMsgCallback(std::move(sess), std::move(msg));
+        };
+        cbs_[TEXT_MSG] = [this](CbSessType sess, RcvdMsgType msg) { 
+            this->TextMsgCallback(std::move(sess), std::move(msg));
+        };
+        cbs_[ECHO_MSG] = [this](CbSessType sess, RcvdMsgType msg) { 
+            this->EchoMsgCallback(std::move(sess), std::move(msg));
+        };
         // TODO(user): 可以添加更多的回调
     }
 

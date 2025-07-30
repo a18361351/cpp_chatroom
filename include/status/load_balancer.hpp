@@ -210,7 +210,7 @@ namespace chatroom {
                 uint32_t prev_load = si->load;
                 si->load = load;
                 si->last_ts = get_timestamp_ms();
-                min_heap_.InsertOrUpdate(id, si, load - prev_load);
+                min_heap_.InsertOrUpdate(id, si, static_cast<int>(load) - static_cast<int>(prev_load));
                 return true;
             }
         }
@@ -219,7 +219,7 @@ namespace chatroom {
         bool RegisterServerInfo(uint32_t id, std::string addr, uint32_t load) {
             auto it = hm_.find(id);
             if (it == hm_.end()) {
-                ServerInfo* si = new ServerInfo(id, std::move(addr), load);
+                auto* si = new ServerInfo(id, std::move(addr), load);
                 min_heap_.InsertOrUpdate(id, si);
                 hm_.insert({id, si});
                 return true;

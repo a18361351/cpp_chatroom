@@ -14,9 +14,9 @@ using namespace std;
 // TODO(user): 为什么加上Noncopyable就无法share_from_this?
 class AsyncClientSess : public /*Noncopyable,*/ enable_shared_from_this<AsyncClientSess> {
 public:
-    AsyncClientSess(io_context& ctx) : sock_(ctx), ctx_(ctx) {}
+    explicit AsyncClientSess(io_context& ctx) : sock_(ctx), ctx_(ctx) {}
     // 启动连接
-    void Start(ip::tcp::endpoint remote) {
+    void Start(const ip::tcp::endpoint& remote) {
         sock_.open(ip::tcp::v4());
         sock_.async_connect(remote, [self = shared_from_this()](const errcode& err) {
             self->ConnectedHandler();
@@ -79,7 +79,7 @@ public:
                 fflush(stdout);
                 return;
             }
-            fprintf(stdout, "Receiver() received %lu bytes\n", bytes_rcvd);
+            fprintf(stdout, "Receiver() received %zu bytes\n", bytes_rcvd);
             fflush(stdout);
             // cur_pos更新
             self->recv_buf_.cur_pos_ += bytes_rcvd;

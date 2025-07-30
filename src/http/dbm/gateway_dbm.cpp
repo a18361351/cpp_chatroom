@@ -82,9 +82,9 @@ ConnWrapper DBM::GetIdleConnWrapper() {
     ConnPtr conn = GetIdleConn();
     if (!conn) {
         // no idle connection
-        return ConnWrapper(nullptr, this);
+        return {nullptr, this};
     }
-    return ConnWrapper(std::move(conn), this);
+    return {std::move(conn), this};
 }
 
 ConnPtr DBM::CreateConn() {

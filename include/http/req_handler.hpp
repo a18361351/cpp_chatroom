@@ -19,7 +19,7 @@
 class ReqHandler : public std::enable_shared_from_this<ReqHandler> {
     public:
     
-    ReqHandler(std::shared_ptr<DBM>&& dbm, uint pool_size = 4) : 
+    explicit ReqHandler(std::shared_ptr<DBM>&& dbm, uint pool_size = 4) : 
         dbm_(std::move(dbm)),
         pool_(pool_size) {}
 

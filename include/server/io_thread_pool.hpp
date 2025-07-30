@@ -15,7 +15,7 @@ public:
     using IOContext = boost::asio::io_context;
     using Work = IOContext::work;
     using WorkPtr = std::unique_ptr<Work>;
-    ~IOThreadPool() {}
+    ~IOThreadPool() = default;
 
     // @brief 获取一个IOContext对象，实际上其内部实现只有一个对象，但为了与另一个命名一致选择了这个命名
     // @return IOContext对象的引用

@@ -12,7 +12,7 @@ std::string Security::HashPassword(std::string_view code, int iter) {
 
     // PBKDF派生密钥
     std::array<unsigned char, 64> derived_key;
-    PKCS5_PBKDF2_HMAC(code.data(), code.size(),
+    PKCS5_PBKDF2_HMAC(code.data(), code.size(),     // NOLINT
                         salt.data(), salt.size(),
                     iter, EVP_sha512(),
                 derived_key.size(), derived_key.data());
@@ -41,10 +41,10 @@ bool Security::Verify(std::string_view code, std::string_view stored_hash) {
     // 3. 使用相同参数重新计算
     std::vector<unsigned char> derived_key(stored_key.size());
 
-    PKCS5_PBKDF2_HMAC(code.data(), code.size(),
-                        salt.data(), salt.size(),
+    PKCS5_PBKDF2_HMAC(code.data(), code.size(),     // NOLINT
+                        salt.data(), salt.size(),   // NOLINT
                     iter, EVP_sha512(),
-                derived_key.size(), derived_key.data());
+                derived_key.size(), derived_key.data());    // NOLINT
 
     // 4. 恒定时间的安全比较
     return CRYPTO_memcmp(derived_key.data(), stored_key.data(), derived_key.size()) == 0;

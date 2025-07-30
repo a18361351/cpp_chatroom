@@ -5,7 +5,7 @@
 #include <cstring>
 #include <netinet/in.h>
 #include <stdexcept>
-#include <stdint.h>
+#include <cstdint>
 
 const int TAG_LEN = 4;
 const int LENGTH_LEN = 4;
@@ -37,7 +37,7 @@ public:
     // @brief 通过最大长度构造空节点对象
     // @param max_len 该节点分配缓冲区的内存大小，注意这是包括头部的，一般使用时要求max_len > HEAD_LEN，但这里不做检查
     // @ 构造的对象中，整个缓冲区长度应为max_len, 当前指针和内容长度均为0
-    MsgNode(uint32_t max_len) : 
+    explicit MsgNode(uint32_t max_len) : 
         data_(max_len > 0 ? new char[max_len] : nullptr), 
         cur_pos_(0), 
         ctx_len_(0),    // 我们实际上不知道内容长度是多少，设为0
@@ -116,6 +116,11 @@ public:
     // @因为项目中我们使用的是shared_ptr<MsgNode>，理论上不会涉及到MsgNode的拷贝
     // @但是为了这个类的一致性，我们还是把他实现在这里，同时加上警告，避免意外调用
     MsgNode& operator=(const MsgNode& rhs) {
+        // 自我赋值检查
+        if (this == &rhs) {
+            return *this;
+        }
+
         printf("WARNING: MsgNode's copy assign called!\n");
         if (!data_ || rhs.max_len_ > max_len_) {
             if (data_) {

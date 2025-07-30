@@ -16,6 +16,7 @@
 // #include <boost/asio.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <utility>
 
 #include "http/req_handler.hpp"
 
@@ -38,7 +39,7 @@ class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
     
     // Ctors
     HTTPConnection(boost::asio::io_context& ctx, std::shared_ptr<ReqHandler> handler) :
-        sock_(ctx), handler_(handler) {
+        sock_(ctx), handler_(std::move(handler)) {
 
     }
 
@@ -53,7 +54,7 @@ class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
     public:
     // ctor
     // @warning HTTPServer本身不负责DBM的启动与关闭，在Start()之前DBM应该是启动好了的
-    HTTPServer(boost::asio::io_context& ctx, boost::asio::ip::tcp::endpoint ep, std::shared_ptr<DBM> dbm);
+    HTTPServer(boost::asio::io_context& ctx, const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<DBM> dbm);
 
     // @brief 开始运行服务器，具体来说是开始接受新连接
     void Start() {

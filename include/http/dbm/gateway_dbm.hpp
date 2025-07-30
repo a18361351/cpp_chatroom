@@ -5,6 +5,7 @@
 #include <string_view>
 #include <queue>
 #include <condition_variable>
+#include <utility>
 #include <vector>
 
 // #include <boost/asio.hpp>
@@ -22,12 +23,12 @@
 class DBM : public Noncopyable {
     public:
     friend class ConnWrapper;
-    DBM(const std::string& username, 
-        const std::string& password, const std::string& db_name,
-        const std::string& mysql_addr, uint mysql_port)
-        : dbm_ctx_(), pool_size_(0), pool_max_cap_(0),
-          username_(username), password_(password), db_name_(db_name),
-          mysql_addr_(mysql_addr), mysql_port_(mysql_port) {
+    DBM(std::string username, 
+        std::string password, std::string db_name,
+        std::string mysql_addr, uint mysql_port)
+        : dbm_ctx_(),
+          username_(std::move(username)), password_(std::move(password)), db_name_(std::move(db_name)),
+          mysql_addr_(std::move(mysql_addr)), mysql_port_(mysql_port) {
             spdlog::debug("DBM created");
           }
     ~DBM() {
@@ -72,8 +73,8 @@ class DBM : public Noncopyable {
     std::queue<ConnPtr> free_queue_;    // 无操作的连接队列
     std::mutex latch_;  // 保护并发安全的互斥锁
     std::condition_variable cv_;    // 用于唤醒消费者的条件变量（消费者是阻塞等待空闲连接的线程）
-    uint pool_size_;        // 当前池子的连接数量
-    uint pool_max_cap_;     // 池子的最大连接数量
+    uint pool_size_{};        // 当前池子的连接数量
+    uint pool_max_cap_{};     // 池子的最大连接数量
     // DBM中保存的服务器数据
     std::string username_;
     std::string password_;

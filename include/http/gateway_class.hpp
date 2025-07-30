@@ -21,7 +21,7 @@ const std::string db_name = "chat";
 class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
     public:
     void run(uint db_conn);
-    GatewayClass(boost::asio::io_context& http_ctx, boost::asio::ip::tcp::endpoint http_ep) : http_ctx_(http_ctx)
+    GatewayClass(boost::asio::io_context& http_ctx, const boost::asio::ip::tcp::endpoint& http_ep) : http_ctx_(http_ctx)
         , dbm_(std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port))
         , http_(std::make_shared<HTTPServer>(http_ctx_, http_ep, dbm_))
     {

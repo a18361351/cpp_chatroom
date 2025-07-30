@@ -34,14 +34,14 @@ void LogicSys::DealMsg() {
 }
 
 // Callbacks
-void LogicSys::WelcomeMsgCallback(CbSessType sess, RcvdMsgType msg) {
+void LogicSys::WelcomeMsgCallback(CbSessType sess, RcvdMsgType msg) {   // NOLINT
     sess->Send("Welcome to the server!", 0);
 }
-void LogicSys::TextMsgCallback(CbSessType sess, RcvdMsgType msg) {
+void LogicSys::TextMsgCallback(CbSessType sess, RcvdMsgType msg) {      // NOLINT
     fwrite(msg->GetContent(), 1, msg->GetContentLen(), stdout);
     fflush(stdout);
 }
-void LogicSys::EchoMsgCallback(CbSessType sess, RcvdMsgType msg) {
+void LogicSys::EchoMsgCallback(CbSessType sess, RcvdMsgType msg) {      // NOLINT
     // 回显消息
     sess->Send(msg->GetContent(), msg->GetContentLen(), ECHO_MSG);
 }

@@ -67,3 +67,44 @@ endif()
 add_subdirectory(src)
 add_subdirectory(proto)
 add_subdirectory(test)
+
+
+## Clang-tidy-check target
+find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-14)
+
+if(CLANG_TIDY_EXE)
+    file(GLOB_RECURSE ALL_SOURCE_FILES
+        ${CMAKE_SOURCE_DIR}/src/*.cpp
+    )
+
+    add_custom_target(
+        clang-tidy-check
+        COMMAND ${CLANG_TIDY_EXE}
+                -p=${CMAKE_BINARY_DIR}
+                -header-filter=.* 
+                ${ALL_SOURCE_FILES}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running clang-tidy analysis..."
+    )
+else()
+    message(STATUS "clang-tidy not found, skipping clang-tidy-check target.")
+endif()
+
+find_program(CPPCHECK_EXE NAMES cppcheck)
+
+if(CPPCHECK_EXE)
+    add_custom_target(
+        cppcheck-check
+        COMMAND ${CPPCHECK_EXE}
+                --enable=all
+                --inconclusive
+                --std=c++20
+                --quiet
+                -I ${CMAKE_SOURCE_DIR}/include
+                ${CMAKE_SOURCE_DIR}/src
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running cppcheck analysis..."
+    )
+else()
+    message(STATUS "cppcheck not found, skipping cppcheck-check target.")
+endif()

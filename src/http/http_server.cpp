@@ -11,7 +11,7 @@ using namespace std;
 using namespace boost::asio;
 
 // HTTPServer class
-HTTPServer::HTTPServer(boost::asio::io_context& ctx, boost::asio::ip::tcp::endpoint ep, std::shared_ptr<DBM> dbm) :
+HTTPServer::HTTPServer(boost::asio::io_context& ctx, const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<DBM> dbm) :
             ctx_(ctx), 
             acc_(boost::asio::make_strand(ctx)),
             req_handler_(std::make_shared<ReqHandler>(std::move(dbm))) {
