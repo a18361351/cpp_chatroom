@@ -2,7 +2,7 @@
 
 #include <memory>
 
-IOContextPool::IOContextPool(std::size_t size) : ctxs_(size > 0 ? size : 4), works_(size > 0 ? size : 4), nxt_(0) {
+IOContextPool::IOContextPool(std::size_t size) : ctxs_(size > 0 ? size : 4), works_(size > 0 ? size : 4) {
     if (size == 0) size = 4;
     // 初始化Work指针
     for (std::size_t i = 0; i < size; ++i) {

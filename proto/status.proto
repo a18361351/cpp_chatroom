@@ -34,6 +34,9 @@ message UserCheckReq {
 // 对网关：请求最低负载的服务器的报文
 message MinimalLoadServerReq {};
 
+// 调试用接口：返回服务器列表信息
+message DumpServerListReq {};
+
 message ServerAddrResp {
     uint32 ret = 1;
     uint32 server_id = 2;
@@ -45,6 +48,18 @@ message GeneralResp {
     uint32 ret = 1; // 0 - 成功，非0 - 失败，未来可用作错误码
 }
 
+message ServerItem {
+    uint32 id = 1;
+    string addr = 2;
+    uint32 load = 3;
+    uint64 last_ts = 4;
+}
+
+message ServerItemListResp {
+    uint32 ret = 1;
+    repeated ServerItem servers = 2;
+}
+
 // 状态服务器的rpc接口定义
 service StatusService {
     rpc ReportServerLoad (StatusReportReq) returns (GeneralResp) {}
@@ -52,4 +67,5 @@ service StatusService {
     rpc CheckMinimalLoadServer (MinimalLoadServerReq) returns (ServerAddrResp) {}
     rpc RegisterServer (ServerRegisterReq) returns (GeneralResp) {}
     rpc KickOnlineUser (KickRequest) returns (GeneralResp) {}
+    rpc DumpServerList (DumpServerListReq) returns (ServerItemListResp) {}
 }

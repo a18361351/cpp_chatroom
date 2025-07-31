@@ -24,13 +24,13 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # hiredis required
-# find_path(HIREDIS_HEADER hiredis)
-# find_library(HIREDIS_LIB hiredis)
+find_path(HIREDIS_HEADER hiredis)
+find_library(HIREDIS_LIB hiredis)
 find_package(hiredis REQUIRED)
 
 # redis++ required
-# find_path(REDIS_PLUS_PLUS_HEADER sw)
-# find_library(REDIS_PLUS_PLUS_LIB redis++)
+find_path(REDIS_PLUS_PLUS_HEADER sw)
+find_library(REDIS_PLUS_PLUS_LIB redis++)
 find_package(redis++ REQUIRED)
 
 # grpc required

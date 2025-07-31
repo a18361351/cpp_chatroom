@@ -1,111 +1,60 @@
 #ifndef STATUS_CLASS_HEADER
 #define STATUS_CLASS_HEADER
 
-#include <sys/types.h>
 
-#include <grpcpp/support/status.h>
-#include <grpcpp/completion_queue.h>
-#include <grpcpp/server_context.h>
-#include <grpcpp/support/async_unary_call.h>
-#include "protocpp/status.grpc.pb.h"
-#include "protocpp/status.pb.h"
-
-#include "status/redis/status_redis.hpp"
-#include "status/load_balancer.hpp"
+#include "status/status_service_impl.hpp"
+#include <grpcpp/server.h>
 
 namespace chatroom {
-    // FIXME(user): complete everything
+    // 同步RPC的写法
     class StatusRPCManager {
         private:
-        class CallData {
-            public:
-            CallData(StatusService::AsyncService* service, grpc::ServerCompletionQueue* cq) 
-                {}
+        StatusRedisMgr* redis_mgr_;     // 不负责其生命周期管理
+        LoadBalancer* load_balancer_;   
 
-            void Request() {
-                
-            }
-            private:
-            StatusService::AsyncService* service_;
-            grpc::ServerCompletionQueue* cq_;
-            grpc::ServerContext ctx_;
-            enum State {
-                CREATE,
-                PROCESS,
-                FINISH
-            };
-        };
-
-
-        private:
-        // 同步RPC的写法
-        class StatusServiceImpl final : public StatusService::Service {
-            grpc::Status ReportServerLoad(grpc::ServerContext* ctx, const StatusReportReq* request, GeneralResp* response) override {
-                auto srv = request->server_id();
-                auto load = request->load();
-                bool ret = load_balancer_->UpdateServerLoad(srv, load);
-                if (ret) {
-                    response->set_ret(0);
-                } else {
-                    response->set_ret(1); // 更新失败
-                }
-                return grpc::Status::OK;
-            }
-            grpc::Status CheckUserOnline(grpc::ServerContext* context, const UserCheckReq* request, GeneralResp* response) override {
-                
-            }
-            grpc::Status CheckMinimalLoadServer(grpc::ServerContext* context, const MinimalLoadServerReq* request, ServerAddrResp* response) override {
-                auto srv_addr = redis_mgr_->QueryMinimalLoadServerAddr();
-                if (!srv_addr.has_value()) {
-                    response->set_ret(1);
-                    return grpc::Status::OK;
-                }
-                response->set_server_addr(srv_addr.value());
-                response->set_ret(0);
-                return grpc::Status::OK;
-            }
-            private:
-            std::shared_ptr<StatusRedisMgr> redis_mgr_;
-            LoadBalancer* load_balancer_;
-        };
-        StatusServiceImpl rpc_service_;
-        LoadBalancer* load_balancer_;   // 不负责其生命周期管理
+        std::unique_ptr<grpc::Server> server_;
+        std::unique_ptr<StatusServiceImpl> service_;      // FIXME
         public:
-        void Run() {
-            
-        }
+        // FIXME: 线程安全
+        // @brief 启动RPC服务，调用后线程会阻塞于此函数，直到其他线程调用Stop函数
+        void Run(const std::string& rpc_address);
+    
+        // FIXME: 线程安全
+        // @brief 停止RPC服务的运行，该函数应该由其他线程调用
+        void Stop();
+
+        // ctor
+        StatusRPCManager(StatusRedisMgr* redis, LoadBalancer* load_balancer) :
+                redis_mgr_(redis), load_balancer_(load_balancer) {}
+        
+        // dtor
+        ~StatusRPCManager() = default;
     
     };
 
 
     class StatusServer {
+        // 注意：StatusServer负责管理redis对象、load_balancer以及rpc对象的生命周期，同时内部使用了大量的裸指针。
+        //      在同步的情况下没有问题，但是在异步的情况下，会出现对象生命周期无法管理的问题（对象销毁时，还有正在
+        //      进行的回调可能访问对象），此时需要修改其资源管理的方式。
         private:
-        StatusRPCManager rpc_;
+        std::unique_ptr<StatusRPCManager> rpc_;
         std::shared_ptr<sw::redis::Redis> redis_obj_;
         std::unique_ptr<StatusRedisMgr> redis_mgr_;
         std::unique_ptr<LoadBalancer> load_balancer_;
-        bool running_;
+        bool running_{};
         public:
-        bool RunStatusServer() {
-            if (!running_) {
-                // Load balancer initialize
-                load_balancer_ = std::make_unique<LoadBalancer>();
 
-                // redis connection initialize
-                redis_obj_ = std::make_shared<sw::redis::Redis>();
-                redis_mgr_ = std::make_unique<StatusRedisMgr>(redis_obj_);
+        // ctor
+        explicit StatusServer(std::shared_ptr<sw::redis::Redis> redis_obj) : 
+            redis_obj_(std::move(redis_obj)) {}
 
-                rpc_.Run();
-                return true;
-            }
-            return false;
-        }
-        void StopStatusServer() {
-            if (running_) {
-                rpc_.Stop();
-                load_balancer_.reset();
-            }
-        }
+        // @brief 启动状态服务
+        // @warning 这个函数是阻塞的……要停止该服务，请在其他线程处调用StopStatusServer()
+        bool RunStatusServer(const std::string& rpc_address);
+
+        // @brief 停止状态服务
+        void StopStatusServer();
     };
 }
 

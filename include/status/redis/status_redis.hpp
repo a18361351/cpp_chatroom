@@ -23,7 +23,7 @@ class StatusRedisMgr {
     std::string sha_min_load_server;    // get server with minimal load
     public:
     // 需要一个Redis对象
-    StatusRedisMgr(std::shared_ptr<sw::redis::Redis> redis_obj) : redis_(std::move(redis_obj)) {
+    explicit StatusRedisMgr(std::shared_ptr<sw::redis::Redis> redis_obj) : redis_(std::move(redis_obj)) {
         RegisterScript();
     }
     ~StatusRedisMgr() {
