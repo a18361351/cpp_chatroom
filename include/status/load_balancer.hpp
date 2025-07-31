@@ -12,7 +12,7 @@
 
 #include "utils/util_class.hpp"
 
-namespace chatroom {
+namespace chatroom::status {
     constexpr uint32_t SERVER_TIMEOUT = 40 * 1000;  // 40s不更新的服务器视为停机
 
     inline uint64_t get_timestamp_ms() {
@@ -141,11 +141,9 @@ namespace chatroom {
         MinHeapImpl<ServerInfo*, decltype(srv_info_comp)*> min_heap_{&srv_info_comp};
         std::unordered_map<uint32_t, ServerInfo*> hm_;  // id->ServerInfo*, 动态分配ServerInfo的内存，避免其在重分配/重哈希时地址失效
     };
-}
 
-
-namespace chatroom {
-    // 模板类成员函数的实现
+    // *********************************************
+    // 以下为模板类成员函数的具体实现
     template <typename T, Comparable<T> greater_comp> requires HaveID<T>
     void MinHeapImpl<T, greater_comp>::InsertOrUpdate(uint32_t id, T val, int hint) {
         // 查找是否存在？
@@ -254,5 +252,8 @@ namespace chatroom {
             }
         }
     }
-};
+
+
+}   // namespace chatroom
+
 #endif
