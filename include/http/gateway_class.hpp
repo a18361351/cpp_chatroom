@@ -9,6 +9,7 @@
 #include "utils/util_class.hpp"
 #include "http/dbm/gateway_dbm.hpp"
 #include "http/http_server.hpp"
+#include "http/gateway_rpc.hpp"
 
 const std::string mysql_addr = "192.168.56.101";
 const int mysql_port = 3306;
@@ -17,6 +18,15 @@ const std::string username = "lance";
 const std::string password = "123456";
 const std::string db_name = "chat";
 
+const std::string status_srv = "192.168.56.101:3000";
+
+// TODO(user): namespace
+
+namespace chatroom {}
+namespace gateway {}
+
+
+
 // 网关服务器的一个实例
 class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
     public:
@@ -24,6 +34,7 @@ class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
     GatewayClass(boost::asio::io_context& http_ctx, const boost::asio::ip::tcp::endpoint& http_ep) : http_ctx_(http_ctx)
         , dbm_(std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port))
         , http_(std::make_shared<HTTPServer>(http_ctx_, http_ep, dbm_))
+        , status_rpc_(std::make_unique<chatroom::StatusRPCClient>(status_srv))
     {
 
     }
@@ -36,6 +47,9 @@ class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
 
     // HTTP server
     std::shared_ptr<HTTPServer> http_;
+
+    // status service (远程RPC，需要状态服务器在线)
+    std::unique_ptr<chatroom::StatusRPCClient> status_rpc_;
 
 };
 

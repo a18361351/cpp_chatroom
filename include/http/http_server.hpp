@@ -20,6 +20,7 @@
 
 #include "http/req_handler.hpp"
 
+// TODO(user): namespace
 
 class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
     friend class HTTPServer;

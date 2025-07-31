@@ -109,18 +109,6 @@ boost::beast::http::message_generator ReqHandler::post_handler(http::request<boo
     } else {
         return not_found(std::move(req));
     }
-    // if (req.target() == "/upload") {
-    //     auto body = req.body();
-    //     std::cout << "Body content = " << body << std::endl;
-    //     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    //     resp.set(http::field::content_type, "text/html");
-    //     resp.keep_alive(req.keep_alive());
-    //     resp.body() = body;
-    //     resp.prepare_payload();
-    //     return resp;
-    // } else {
-    //     return not_found(std::move(req));
-    // }
 }
 
 
