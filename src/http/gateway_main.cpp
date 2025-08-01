@@ -4,12 +4,13 @@
 #include "log/log_manager.hpp"
 
 using namespace std;
+using GatewayApp = chatroom::gateway::GatewayClass;
 namespace asio = boost::asio;
 namespace ip = asio::ip;
 int main() {
     asio::io_context http_ctx;
     ip::tcp::endpoint ep(ip::tcp::v4(), 1234);
-    GatewayClass gateway(http_ctx, ep);
+    GatewayApp gateway(http_ctx, ep);
     gateway.run(10);
 
     http_ctx.run();
