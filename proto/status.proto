@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package chatroom;
+package chatroom.status;
 
 // 对后台服务器：负载状态报告的报文
 message StatusReportReq {

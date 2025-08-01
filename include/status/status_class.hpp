@@ -5,7 +5,7 @@
 #include "status/status_service_impl.hpp"
 #include <grpcpp/server.h>
 
-namespace chatroom {
+namespace chatroom::status {
     // 同步RPC的写法
     class StatusRPCManager {
         private:

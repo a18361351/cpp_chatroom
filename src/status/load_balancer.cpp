@@ -1,6 +1,6 @@
 #include "status/load_balancer.hpp"
 
-using namespace chatroom;
+using namespace chatroom::status;
 
 bool LoadBalancer::UpdateServerLoad(uint32_t id, uint32_t load) {
     auto it = hm_.find(id);

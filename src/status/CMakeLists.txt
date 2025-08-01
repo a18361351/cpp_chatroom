@@ -29,4 +29,6 @@ target_link_libraries(status_server
         ${REDIS_PLUS_PLUS_LIB}
         # grpc
         gRPC::grpc++
+        # spdlog
+        spdlog::spdlog
 )

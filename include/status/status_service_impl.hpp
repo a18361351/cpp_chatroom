@@ -5,7 +5,7 @@
 #include "status/load_balancer.hpp"
 #include "status/redis/status_redis.hpp"
 
-namespace chatroom {
+namespace chatroom::status {
 
     class StatusServiceImpl final : public StatusService::Service {
         grpc::Status ReportServerLoad(grpc::ServerContext* ctx, const StatusReportReq* request, GeneralResp* response) override {
