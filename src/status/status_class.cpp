@@ -1,5 +1,6 @@
 #include <grpcpp/security/server_credentials.h>
 #include <string>
+#include <sw/redis++/connection_pool.h>
 #include <sys/types.h>
 
 #include <grpcpp/support/status.h>
@@ -38,18 +39,15 @@ void chatroom::status::StatusRPCManager::Stop() {
     }
 }
 
-bool chatroom::status::StatusServer::RunStatusServer(const string& rpc_address) {
+bool chatroom::status::StatusServer::RunStatusServer(const string& rpc_address, const sw::redis::ConnectionOptions& conn_opt, const sw::redis::ConnectionPoolOptions& pool_opt) {
     if (!running_) {
         // Load balancer initialize
         spdlog::info("LoadBalancer init");
         load_balancer_ = std::make_unique<LoadBalancer>();
 
         // redis connection initialize
-        // unless the redis object is not used
-        if (redis_obj_) {
-            spdlog::info("Redis init");
-            redis_mgr_ = std::make_unique<StatusRedisMgr>(redis_obj_);
-        }
+        redis_mgr_ = std::make_unique<RedisMgr>();
+        redis_mgr_->ConnectTo(conn_opt, pool_opt);
 
         // RPC manager initialize
         spdlog::info("gRPC Server init");
@@ -68,7 +66,6 @@ void chatroom::status::StatusServer::StopStatusServer() {
         rpc_->Stop();
         rpc_.reset();
         redis_mgr_.reset();
-        redis_obj_.reset();
         load_balancer_.reset();
         running_ = false;
         spdlog::info("StatusServer stopped");

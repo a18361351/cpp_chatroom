@@ -63,14 +63,14 @@ namespace chatroom::status {
 
         public:
         // ctor
-        StatusServiceImpl(StatusRedisMgr* redis, LoadBalancer* load_balancer) :
+        StatusServiceImpl(RedisMgr* redis, LoadBalancer* load_balancer) :
             redis_mgr_(redis), load_balancer_(load_balancer) {}
 
         // dtor
         ~StatusServiceImpl() override = default;
 
         private:
-        StatusRedisMgr* redis_mgr_;
+        RedisMgr* redis_mgr_;
         LoadBalancer* load_balancer_;
     };
 }

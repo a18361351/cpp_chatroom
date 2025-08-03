@@ -9,7 +9,7 @@ namespace chatroom::status {
     // 同步RPC的写法
     class StatusRPCManager {
         private:
-        StatusRedisMgr* redis_mgr_;     // 不负责其生命周期管理
+        RedisMgr* redis_mgr_;     // 不负责其生命周期管理
         LoadBalancer* load_balancer_;   
 
         std::unique_ptr<grpc::Server> server_;
@@ -24,7 +24,7 @@ namespace chatroom::status {
         void Stop();
 
         // ctor
-        StatusRPCManager(StatusRedisMgr* redis, LoadBalancer* load_balancer) :
+        StatusRPCManager(RedisMgr* redis, LoadBalancer* load_balancer) :
                 redis_mgr_(redis), load_balancer_(load_balancer) {}
         
         // dtor
@@ -39,19 +39,17 @@ namespace chatroom::status {
         //      进行的回调可能访问对象），此时需要修改其资源管理的方式。
         private:
         std::unique_ptr<StatusRPCManager> rpc_;
-        std::shared_ptr<sw::redis::Redis> redis_obj_;
-        std::unique_ptr<StatusRedisMgr> redis_mgr_;
+        std::unique_ptr<RedisMgr> redis_mgr_;
         std::unique_ptr<LoadBalancer> load_balancer_;
-        bool running_{};
+        bool running_{false};
         public:
 
         // ctor
-        explicit StatusServer(std::shared_ptr<sw::redis::Redis> redis_obj) : 
-            redis_obj_(std::move(redis_obj)) {}
+        StatusServer() = default;
 
         // @brief 启动状态服务
         // @warning 这个函数是阻塞的……要停止该服务，请在其他线程处调用StopStatusServer()
-        bool RunStatusServer(const std::string& rpc_address);
+        bool RunStatusServer(const string& rpc_address, const sw::redis::ConnectionOptions& conn_opt, const sw::redis::ConnectionPoolOptions& pool_opt);
 
         // @brief 停止状态服务
         void StopStatusServer();
