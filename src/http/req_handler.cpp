@@ -97,6 +97,17 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     }
     auto addr = rpc_resp.server_addr();
 
+    // 检查用户的登录状态
+    auto check_result = redis_->UserLoginAttempt(username);
+    if (!check_result.first) { // 尝试登录请求失败：用户已登录或无法查询在线状态
+        if (!check_result.second.has_value()) { // 无法查询在线状态
+            spdlog::error("Redis UserLoginAttempt failed");
+            return server_error(std::move(req), "Server error");
+        }
+        // 否则，就是用户已登录的情况
+        // TODO(user): 实现强制下线功能
+    }
+
     // 生成用户的token
     string token = TokenGenerator();
     redis_->RegisterUserToken(token, username, 300); // 默认5分钟的token存活时间

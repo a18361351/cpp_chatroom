@@ -2,6 +2,7 @@
 #define HTTP_GATEWAY_REDIS_HEADER
 
 // gateway_redis: 将redis对象和业务对象封装在一起，提供简化的接口
+#include <chrono>
 #include <iterator>
 
 #include <stdexcept>
@@ -18,6 +19,12 @@ constexpr const char* SERVER_TABLE = "server_list";
 constexpr const char* USER_TABLE = "user_list";
 
 using namespace std;
+
+inline long long GetTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}
 
 namespace chatroom::gateway {
     // Redis类管理器：负责独占Redis对象，并管理其生命周期
@@ -107,44 +114,37 @@ namespace chatroom::gateway {
             "end\n"
             "return redis.call(\"HGET\", " + std::string(SERVER_TABLE) + ", server_id)";
             sha_server_by_user = redis_->script_load(get_server_by_userid);
-    
-            const std::string get_minimal_load_server = 
-            "local server_id = redis.call(\"ZRANGE\", " + std::string(SERVER_LOAD) +", 0, 0)\n"
-            "if not server_id then\n"
-            "   return nil\n"
-            "end\n"
-            "return redis.call(\"HGET\", " + std::string(SERVER_TABLE) + ", server_id)";
-            sha_min_load_server = redis_->script_load(get_minimal_load_server);
         }
     
-    
-        // @brief 返回最小负载的服务器id
-        std::optional<std::string> QueryMinimalLoadServerId() {
-            vector<string> ans;
-            redis_->zrange(SERVER_LOAD, 0, 0, std::back_inserter(ans));
-            if (ans.empty()) return string();
-            return ans.back();
-        }
-    
-        // @brief 返回最小负载的服务器地址
-        std::optional<std::string> QueryMinimalLoadServerAddr() {
-            return redis_->evalsha<std::optional<std::string>>(sha_min_load_server, {}, {});
-        }
-    
-        // @brief 根据用户id查询其所在的服务器id
-        std::optional<std::string> QueryServerIdByUser(std::string_view user_id) {
-            return redis_->get(user_id);
-        }
-    
-        // @brief 根据用户id查询其所在的服务器地址
-        std::optional<std::string> QueryServerAddrByUser(std::string_view user_id) {
-            return redis_->evalsha<std::optional<std::string>>(sha_server_by_user, {user_id}, {});
-        }
     
         // @brief 将用户的Token存储到Redis中，以便用户进行登录
         void RegisterUserToken(std::string_view token, std::string_view user_id, long long ttl = 300) {   // 默认5分钟的token存活时间
             std::string key("token:"); key += token;
             redis_->setex(key, ttl, user_id);
+        }
+
+        // @return {bool, string}: 操作是否成功，以及如果用户已经登录的话，其所在的服务器编号
+        std::pair<bool, std::optional<std::string>> UserLoginAttempt(std::string_view user_id) {
+            // TODO(user): 写成脚本最好
+            std::string key("status:"); key += user_id;
+
+            // 检查用户是否以及登录？
+            auto ret = redis_->hget(key, "server_id");
+            if (ret.has_value()) {
+                // 以及登录，则返回其所在的服务器编号，实现强制下线逻辑
+                return {false, ret};
+            } // else
+            // 否则，在Redis中更新用户状态
+            static std::unordered_map<string, string> user_data = {{"server_id", "unset"}, {"status", "unset"}, {"user_id", "unset"}, {"last_login", "unset"}};
+            user_data["status"] = "verifyed";
+            user_data["user_id"] = user_id;
+            user_data["last_login"] = std::to_string(GetTimestamp());
+
+            long long field_set = redis_->hsetex(key, user_data.begin(), user_data.end(), std::chrono::milliseconds(60000));
+            if (field_set != user_data.size()) {
+                return {false, nullopt};
+            }
+            return {true, nullopt};
         }
     };
 
