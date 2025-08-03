@@ -37,11 +37,13 @@ find_package(redis++ REQUIRED)
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(protobuf CONFIG REQUIRED)
 message(STATUS "Protobuf version: ${protobuf_VERSION}")
+
 find_package(gRPC CONFIG REQUIRED)
 
 # spdlog required
 find_package(spdlog REQUIRED)
 # target_link_libraries(my_project PRIVATE spdlog::spdlog)
+
 
 
 
@@ -62,7 +64,6 @@ elseif (USE_IOTHREAD_POOL)
 else()
     message(STATUS "Using default single-threaded implementation.")
 endif()
-
 
 add_subdirectory(src)
 add_subdirectory(proto)
@@ -108,3 +109,4 @@ if(CPPCHECK_EXE)
 else()
     message(STATUS "cppcheck not found, skipping cppcheck-check target.")
 endif()
+
