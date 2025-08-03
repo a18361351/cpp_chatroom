@@ -4,10 +4,12 @@
 // load_balancer: 简易负载均衡器，其同时负责服务器信息的存储。
 
 #include <cstdint>
-#include <ctime>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
-#include <queue>
+#include <vector>
 #include <unordered_map>
 
 #include "utils/util_class.hpp"
@@ -45,11 +47,11 @@ namespace chatroom::status {
         {t->GetID()} -> std::convertible_to<uint32_t>;
     };
 
+    // 非线程安全的小根堆
     template <typename T, Comparable<T> greater_comp = std::greater<T>> requires HaveID<T>
     class MinHeapImpl : public Noncopyable {
         public:
         explicit MinHeapImpl(greater_comp comp) : comp_(comp) {}
-
 
         // @brief 插入、或更新一个元素在堆中的位置
         // @param idx 元素的标识idx，通过这个标识来访问元素，并对元素进行具体操作
@@ -104,6 +106,8 @@ namespace chatroom::status {
         return lhs->load > rhs->load;
     }
 
+    // 带有服务器列表的负载均衡器
+    // 线程安全
     class LoadBalancer : public Noncopyable {
         public:
         // @brief 默认构造函数
@@ -121,25 +125,26 @@ namespace chatroom::status {
         bool RemoveServer(uint32_t id);
 
         // @brief 获取最小负载的服务器信息
-        // @return 返回指向对应ServerInfo的指针，nullptr表示现在没有任何可用的服务器
-        ServerInfo* GetMinimalLoadServer();
+        // @return first: optional<ServerInfo> 返回对应ServerInfo信息，nullopt表示现在没有任何可用的服务器
+        //         second: bool 表示获取过程中是否发生了过期服务器的清除过程
+        std::pair<std::optional<ServerInfo>, bool> GetMinimalLoadServerInfo();
     
         // @brief 调试用接口，返回底层的服务器列表
-        std::vector<ServerInfo*>& GetServerList() {
-            return min_heap_.Expose();
-        }
+        void CopyServerInfoList(std::vector<ServerInfo> &out);
+
+        // @brief 检查每个服务器的TTL有效期，并自动清理
+        // @return 返回过期并被清理的服务器数量，0表示没有过期的服务器
+        uint32_t CheckTTL();
 
         ~LoadBalancer() {
             // hm_中包含了动态分配的内存
-            for (auto& pair : hm_) {
-                delete pair.second; // 删除ServerInfo对象
-            }
+            hm_.clear();
         }
 
         private:
-        
         MinHeapImpl<ServerInfo*, decltype(srv_info_comp)*> min_heap_{&srv_info_comp};
-        std::unordered_map<uint32_t, ServerInfo*> hm_;  // id->ServerInfo*, 动态分配ServerInfo的内存，避免其在重分配/重哈希时地址失效
+        std::unordered_map<uint32_t, std::unique_ptr<ServerInfo>> hm_;  // id->ServerInfo*, 动态分配ServerInfo的内存，避免其在重分配/重哈希时地址失效
+        std::mutex mtx_;
     };
 
     // *********************************************
@@ -252,7 +257,6 @@ namespace chatroom::status {
             }
         }
     }
-
 
 }   // namespace chatroom
 

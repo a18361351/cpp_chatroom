@@ -1,13 +1,15 @@
 #include "status/load_balancer.hpp"
+#include <mutex>
 
 using namespace chatroom::status;
 
-bool LoadBalancer::UpdateServerLoad(uint32_t id, uint32_t load) {
+bool chatroom::status::LoadBalancer::UpdateServerLoad(uint32_t id, uint32_t load) {
+    std::unique_lock<std::mutex> lock(mtx_);
     auto it = hm_.find(id);
     if (it == hm_.end()) {
         return false;
     } else {
-        ServerInfo* si = it->second;
+        ServerInfo* si = it->second.get();
         uint32_t prev_load = si->load;
         si->load = load;
         si->last_ts = get_timestamp_ms();
@@ -16,12 +18,13 @@ bool LoadBalancer::UpdateServerLoad(uint32_t id, uint32_t load) {
     }
 }
 
-bool LoadBalancer::RegisterServerInfo(uint32_t id, std::string addr, uint32_t load) {
+bool chatroom::status::LoadBalancer::RegisterServerInfo(uint32_t id, std::string addr, uint32_t load) {
+    std::unique_lock<std::mutex> lock(mtx_);
     auto it = hm_.find(id);
     if (it == hm_.end()) {
-        auto* si = new ServerInfo(id, std::move(addr), load);
-        min_heap_.InsertOrUpdate(id, si);
-        hm_.insert({id, si});
+        auto si = std::make_unique<ServerInfo>(id, std::move(addr), load);
+        min_heap_.InsertOrUpdate(id, si.get());
+        hm_.insert({id, std::move(si)});
         return true;
     } else {
         // ignore addr
@@ -29,30 +32,54 @@ bool LoadBalancer::RegisterServerInfo(uint32_t id, std::string addr, uint32_t lo
     }
 }
 
-bool LoadBalancer::RemoveServer(uint32_t id) {
+bool chatroom::status::LoadBalancer::RemoveServer(uint32_t id) {
+    std::unique_lock<std::mutex> lock(mtx_);
     auto it = hm_.find(id);
     if (it == hm_.end()) {
         return false; // 不存在
     } else {
-        ServerInfo* si = it->second;
         min_heap_.AnyRemove(id); // 从堆中移除
         hm_.erase(it); // 从哈希表中移除
-        delete si; // 删除动态分配的内存
         return true;
     }
 }
 
-ServerInfo* LoadBalancer::GetMinimalLoadServer() {
+std::pair<std::optional<ServerInfo>, bool> chatroom::status::LoadBalancer::GetMinimalLoadServerInfo() {
+    std::unique_lock<std::mutex> lock(mtx_);
+    bool updated = false;
     while (!min_heap_.Empty()) {
         ServerInfo* si;
         si = min_heap_.Get();
         if (get_timestamp_ms() - si->last_ts < SERVER_TIMEOUT) {
-            return si; // 有效的服务器
+            return {*si, updated}; // 有效的服务器
         } else {
+            updated = true;
             min_heap_.Remove(); // 过期的服务器，移除
             hm_.erase(si->GetID()); // 从哈希表中删除
-            delete si; // 删除动态分配的内存
         }
     }
-    return nullptr; // 没有有效的服务器
+    return {std::nullopt, updated}; // 没有有效的服务器
+}
+
+void chatroom::status::LoadBalancer::CopyServerInfoList(std::vector<ServerInfo> &out) {
+    std::unique_lock<std::mutex> lock(mtx_);
+    out.clear();
+    for (const auto& item : hm_) {
+        out.push_back(*(item.second));
+    }
+}
+
+uint32_t chatroom::status::LoadBalancer::CheckTTL() {
+    std::unique_lock<std::mutex> lock(mtx_);
+    uint32_t removed = 0;
+    for (auto iter = hm_.begin(); iter != hm_.end(); ) {
+        if (get_timestamp_ms() - iter->second->last_ts >= SERVER_TIMEOUT) { // 过期服务器
+            min_heap_.AnyRemove(iter->second->id);   // == item.first
+            iter = hm_.erase(iter); // 从哈希表中删除
+            ++removed;
+        } else {
+            ++iter;
+        }
+    }
+    return removed;
 }
