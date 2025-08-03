@@ -21,9 +21,9 @@ class Session;
 class Server {
 public:
     friend class Session;
-    Server(boost::asio::io_context& context) : context_(context), acc_(context) {}
+    explicit Server(boost::asio::io_context& context) : context_(context), acc_(context) {}
 
-    void Listen(boost::asio::ip::tcp::endpoint ep) {
+    void Listen(const boost::asio::ip::tcp::endpoint& ep) {
         acc_.open(boost::asio::ip::tcp::v4());
         acc_.bind(ep);  // 
         acc_.listen();  // default backlog
@@ -34,7 +34,7 @@ public:
     // 强制下线逻辑
     bool Kick(const std::string& uuid);
 
-    ~Server() {
+    ~Server() { // NOLINT
 #ifdef USING_IOCONTEXT_POOL
     Singleton<IOContextPool>::GetInstance().Stop();
 #elif defined(USING_IOTHREAD_POOL)

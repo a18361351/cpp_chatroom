@@ -15,8 +15,8 @@ public:
     Singleton(const Singleton&) = delete;
     Singleton& operator=(const Singleton&) = delete;
 private:
-    Singleton() {}
-    ~Singleton() {}
+    Singleton() = default;
+    ~Singleton() = default;
 };
 
 // 禁止类对象拷贝的工具类

@@ -1,10 +1,12 @@
 #include "server/io_context_pool.hpp"
 
-IOContextPool::IOContextPool(std::size_t size) : ctxs_(size > 0 ? size : 4), works_(size > 0 ? size : 4), nxt_(0) {
+#include <memory>
+
+IOContextPool::IOContextPool(std::size_t size) : ctxs_(size > 0 ? size : 4), works_(size > 0 ? size : 4) {
     if (size == 0) size = 4;
     // 初始化Work指针
     for (std::size_t i = 0; i < size; ++i) {
-        works_[i] = std::unique_ptr<Work>(new Work(ctxs_[i]));
+        works_[i] = std::make_unique<Work>(ctxs_[i]);
     }
 
     // 对每个io_context，创建线程并执行（绑定）

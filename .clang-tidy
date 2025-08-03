@@ -1,0 +1,16 @@
+---
+Checks: '
+        bugprone-*,
+        modernize-*,
+        performance-*,
+        -bugprone-easily-swappable-parameters,
+        -bugprone-exception-escape,
+        -bugprone-implicit-widening-of-multiplication-result,
+        -bugprone-signed-char-misuse,
+        -modernize-use-nodiscard,
+        -modernize-use-trailing-return-type,
+        -performance-no-int-to-ptr
+        '
+WarningsAsErrors: '*'
+AnalyzeTemporaryDtors: true
+FormatStyle: none 

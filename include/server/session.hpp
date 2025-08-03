@@ -28,9 +28,9 @@ public:
     friend class Server;
     // 添加对strand的支持
     Session(boost::asio::io_context& ctx, Server* srv) : 
+        recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)), 
         sock_(ctx), 
         srv_(srv), 
-        recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)), 
         strand_(ctx.get_executor()) // strand保护在多个线程同时执行回调的情况下，不会并发调用回调
         {
         // 创建UUID
@@ -173,9 +173,9 @@ private:
     bool down_{false};  // 该session被强制下线
     std::string uuid_;
     boost::asio::ip::tcp::socket sock_;
-    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
-    
     Server* srv_;
+
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
 };
 
 #endif

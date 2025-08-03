@@ -15,7 +15,7 @@ public:
     using IOContext = boost::asio::io_context;
     using Work = IOContext::work;
     using WorkPtr = std::unique_ptr<Work>;
-    ~IOContextPool() {}
+    ~IOContextPool() = default;
 
     // @brief 获取下一个IOContext的引用，使用轮询算法，这是线程安全的
     // @return IOContext的引用
@@ -29,7 +29,7 @@ private:
     std::vector<IOContext> ctxs_;
     std::vector<WorkPtr> works_;
     std::vector<std::thread> threads_;
-    std::size_t nxt_;
+    std::size_t nxt_{};
     std::mutex latch_;
 };
 

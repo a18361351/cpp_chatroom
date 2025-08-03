@@ -1,10 +1,13 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(NetChatRoom VERSION 0.0.0 LANGUAGES CXX)
 
 # Export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++20
+# 设置输出目录
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# C++20，因为在未来可能用到协程
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -21,13 +24,13 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # hiredis required
-# find_path(HIREDIS_HEADER hiredis)
-# find_library(HIREDIS_LIB hiredis)
+find_path(HIREDIS_HEADER hiredis)
+find_library(HIREDIS_LIB hiredis)
 find_package(hiredis REQUIRED)
 
 # redis++ required
-# find_path(REDIS_PLUS_PLUS_HEADER sw)
-# find_library(REDIS_PLUS_PLUS_LIB redis++)
+find_path(REDIS_PLUS_PLUS_HEADER sw)
+find_library(REDIS_PLUS_PLUS_LIB redis++)
 find_package(redis++ REQUIRED)
 
 # grpc required
@@ -36,6 +39,12 @@ find_package(protobuf CONFIG REQUIRED)
 message(STATUS "Protobuf version: ${protobuf_VERSION}")
 
 find_package(gRPC CONFIG REQUIRED)
+
+# spdlog required
+find_package(spdlog REQUIRED)
+# target_link_libraries(my_project PRIVATE spdlog::spdlog)
+
+
 
 
 # IOContextPool/ThreadPool options
@@ -56,172 +65,48 @@ else()
     message(STATUS "Using default single-threaded implementation.")
 endif()
 
-# ## Shared common used code lib
-# # Place common used code here
-# add_library(common
-#     src/server/session.cpp
-# )
-
-# # 包含头文件目录
-# target_include_directories(common
-#     PUBLIC
-#         ${CMAKE_SOURCE_DIR}/include
-#         ${Boost_INCLUDE_DIRS}
-# )
-
-# # 链接库
-# target_link_libraries(common
-#     PUBLIC
-#         Boost::system
-# )
+add_subdirectory(src)
+add_subdirectory(proto)
+add_subdirectory(test)
 
 
-## Server executable
-# 添加可执行目标
-add_executable(chat_server
-    src/server/server_main.cpp
-    src/server/server_class.cpp
-    src/server/session.cpp
-    src/server/io_context_pool.cpp
-    src/server/io_thread_pool.cpp
-    src/server/logic.cpp
-)
+## Clang-tidy-check target
+find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-14)
 
-# 包含头文件目录
-target_include_directories(chat_server
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-        # boost
-        ${Boost_INCLUDE_DIRS}
-        # Redis++ support
-        ${HIREDIS_HEADER}
-        ${REDIS_PLUS_PLUS_HEADER}
-        # Boost.mysql support
-        
-)
+if(CLANG_TIDY_EXE)
+    file(GLOB_RECURSE ALL_SOURCE_FILES
+        ${CMAKE_SOURCE_DIR}/src/*.cpp
+    )
 
-# 链接库
-target_link_libraries(chat_server
-    PRIVATE
-        Boost::system
-        # Redis++ support
-        ${HIREDIS_LIB}
-        ${REDIS_PLUS_PLUS_LIB}
-        # Boost.mysql support
-        Threads::Threads
-        OpenSSL::Crypto
-        OpenSSL::SSL
-)
+    add_custom_target(
+        clang-tidy-check
+        COMMAND ${CLANG_TIDY_EXE}
+                -p=${CMAKE_BINARY_DIR}
+                -header-filter=.* 
+                ${ALL_SOURCE_FILES}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running clang-tidy analysis..."
+    )
+else()
+    message(STATUS "clang-tidy not found, skipping clang-tidy-check target.")
+endif()
 
+find_program(CPPCHECK_EXE NAMES cppcheck)
 
-## HTTP Gateserver exec
-# 添加可执行目标
-add_executable(http_gate
-    src/http/http_server.cpp
-    src/http/req_handler.cpp
-)
+if(CPPCHECK_EXE)
+    add_custom_target(
+        cppcheck-check
+        COMMAND ${CPPCHECK_EXE}
+                --enable=all
+                --inconclusive
+                --std=c++20
+                --quiet
+                -I ${CMAKE_SOURCE_DIR}/include
+                ${CMAKE_SOURCE_DIR}/src
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running cppcheck analysis..."
+    )
+else()
+    message(STATUS "cppcheck not found, skipping cppcheck-check target.")
+endif()
 
-# 包含头文件目录
-target_include_directories(http_gate
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-    PUBLIC
-        ${Boost_INCLUDE_DIRS}
-)
-
-# 链接库
-target_link_libraries(http_gate
-    PRIVATE
-        Boost::system
-        # Jsoncpp support
-        jsoncpp_lib     
-)
-
-
-## Client executable
-# 添加可执行目标
-add_executable(chat_client
-    src/client/client_main.cpp
-)
-
-# 包含头文件目录
-target_include_directories(chat_client
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-    PUBLIC
-        ${Boost_INCLUDE_DIRS}
-)
-
-# 链接库
-target_link_libraries(chat_client
-    PRIVATE
-        Boost::system
-        # common
-)
-
-
-## Test programs
-# 添加可执行目标
-add_executable(concurrent_test EXCLUDE_FROM_ALL
-    test/concurrent_test.cpp
-)
-
-# 包含头文件目录
-target_include_directories(concurrent_test
-PRIVATE
-${CMAKE_SOURCE_DIR}/include
-PUBLIC
-${Boost_INCLUDE_DIRS}
-)
-
-# 链接库
-target_link_libraries(concurrent_test
-PRIVATE
-Boost::system
-# common
-)
-
-
-# 添加可执行目标
-add_executable(grpc_test_srv EXCLUDE_FROM_ALL
-    test/lib_example/grpc_test/demo.grpc.pb.cc
-    test/lib_example/grpc_test/demo.pb.cc
-    test/lib_example/grpc_test/grpc_test.cpp
-)
-add_executable(grpc_test_cli EXCLUDE_FROM_ALL
-    test/lib_example/grpc_test/demo.grpc.pb.cc
-    test/lib_example/grpc_test/demo.pb.cc
-    test/lib_example/grpc_test/grpc_test_cli.cpp
-)
-
-# 包含头文件目录
-target_include_directories(grpc_test_srv
-PRIVATE
-${CMAKE_SOURCE_DIR}/include
-PUBLIC
-${Boost_INCLUDE_DIRS}
-)
-target_include_directories(grpc_test_cli
-PRIVATE
-${CMAKE_SOURCE_DIR}/include
-PUBLIC
-${Boost_INCLUDE_DIRS}
-)
-
-# 链接库
-target_link_libraries(grpc_test_srv
-PRIVATE
-Boost::system
-gRPC::grpc++
-)
-target_link_libraries(grpc_test_cli
-PRIVATE
-Boost::system
-gRPC::grpc++
-)
-
-
-# 设置输出目录为 build/test
-set_target_properties(concurrent_test grpc_test_srv grpc_test_cli PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test
-)
