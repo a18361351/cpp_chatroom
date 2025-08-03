@@ -47,6 +47,8 @@ inline string TokenGenerator() {
 
 // 对/login的POST请求
 boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(http::request<boost::beast::http::string_body>&& req) {
+    // TODO(user): 为重复登录的情况作检查
+
     http::response<http::string_body> resp;
     // 登录验证逻辑
     Json::Reader rr;
@@ -62,7 +64,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         username = readed["username"].asString();
         passcode = readed["passcode"].asString();
     } catch (...) {
-        spdlog::error("Error occured when parsing json");
+        spdlog::error("JSON format doesn't match");
         return bad_request(std::move(req), "Invalid request format");
     }
 
@@ -71,7 +73,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     switch (db_ret) {
         case GATEWAY_SUCCESS:
             // 登录成功
-            spdlog::info("User {} login successfully", username);    
+            spdlog::info("User {} verified successfully", username);        // 身份验证成功，下一步
             break;
         case GATEWAY_USER_NOT_EXIST: case GATEWAY_VERIFY_FAILED:
             spdlog::info("Incorrect login attempt by user {}", username);
@@ -83,10 +85,6 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
             spdlog::error("Unknown error when user {} login", username);
             return server_error(std::move(req), "Server error");
     }
-    // 生成用户的token
-    string token = TokenGenerator();
-    redis_->RegisterUserToken(token, username, 300); // 默认5分钟的token存活时间
-
     // 通过RPC获取服务器信息
     auto stub = rpc_->GetStatusStub();
     grpc::ClientContext ctx;
@@ -97,9 +95,12 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         spdlog::error("Status RPC call failed: {}", rpc_status.error_message());
         return server_error(std::move(req), "Server error"); // 对客户隐藏具体的错误信息
     }
-
     auto addr = rpc_resp.server_addr();
 
+    // 生成用户的token
+    string token = TokenGenerator();
+    redis_->RegisterUserToken(token, username, 300); // 默认5分钟的token存活时间
+    
     // 现在，把token以及服务器地址打包，发送给用户
     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     resp.set(http::field::content_type, "application/json");
@@ -131,7 +132,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
         username = readed["username"].asString();
         passcode = readed["passcode"].asString();
     } catch (...) {
-        spdlog::error("Error occured when parsing json");
+        spdlog::error("JSON format doesn't match");
         return bad_request(std::move(req), "Invalid request format");
     }
     spdlog::info("Attempt to register a new user {}", username);
