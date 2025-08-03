@@ -1,13 +1,13 @@
-#include <grpcpp/security/server_credentials.h>
 #include <string>
-#include <sw/redis++/connection_pool.h>
 #include <sys/types.h>
 
+#include <grpcpp/security/server_credentials.h>
 #include <grpcpp/support/status.h>
 #include <grpcpp/completion_queue.h>
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/async_unary_call.h>
 #include <grpcpp/server_builder.h>
+#include <sw/redis++/connection_pool.h>
 
 #include "log/log_manager.hpp"
 #include "status/status_class.hpp"

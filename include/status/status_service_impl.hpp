@@ -1,3 +1,5 @@
+#ifndef STATUS_SERVICE_IMPL_HEADER
+#define STATUS_SERVICE_IMPL_HEADER
 
 #include "protocpp/status.grpc.pb.h"
 #include "protocpp/status.pb.h"
@@ -74,3 +76,5 @@ namespace chatroom::status {
         LoadBalancer* load_balancer_;
     };
 }
+
+#endif

@@ -1,5 +1,6 @@
-#include "status/load_balancer.hpp"
 #include <mutex>
+
+#include "status/load_balancer.hpp"
 
 using namespace chatroom::status;
 

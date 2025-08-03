@@ -1,5 +1,5 @@
-#ifndef STATUS_LOAD_BALANCER
-#define STATUS_LOAD_BALANCER
+#ifndef STATUS_LOAD_BALANCER_HEADER
+#define STATUS_LOAD_BALANCER_HEADER
 
 // load_balancer: 简易负载均衡器，其同时负责服务器信息的存储。
 

@@ -1,9 +1,11 @@
 #ifndef STATUS_CLASS_HEADER
 #define STATUS_CLASS_HEADER
 
-
-#include "status/status_service_impl.hpp"
 #include <grpcpp/server.h>
+
+#include "status/load_balancer.hpp"
+#include "status/redis/status_redis.hpp"
+#include "status/status_service_impl.hpp"
 
 namespace chatroom::status {
     // 同步RPC的写法

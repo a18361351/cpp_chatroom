@@ -1,4 +1,5 @@
 #include <string>
+
 #include <sw/redis++/connection.h>
 
 #include "log/log_manager.hpp"
@@ -9,7 +10,7 @@
 const std::string status_addr = "0.0.0.0:3000";
 
 int main(int argc, char** argv) {
-    spdlog::info("Status server executable starting at %s", status_addr.c_str());
+    spdlog::info("Status server executable starting at {}", status_addr.c_str());
     chatroom::status::StatusServer srv;
     // redis service
     sw::redis::ConnectionOptions conn_opt; // 连接到的服务器选项
