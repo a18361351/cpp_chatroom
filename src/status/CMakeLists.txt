@@ -4,6 +4,8 @@ add_executable(status_server
     status_class.cpp
     status_main.cpp
     load_balancer.cpp
+    status_uploader.cpp
+    redis/status_redis.cpp
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
 )

@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <iterator>
 #include <mutex>
 
 #include "status/load_balancer.hpp"
@@ -28,8 +30,14 @@ bool chatroom::status::LoadBalancer::RegisterServerInfo(uint32_t id, std::string
         hm_.insert({id, std::move(si)});
         return true;
     } else {
-        // ignore addr
-        return UpdateServerLoad(id, load);
+        // 已存在服务器信息的情况重新收到登记信息，选择更新
+        ServerInfo* si = it->second.get();
+        uint32_t prev_load = si->load;
+        si->load = load;
+        si->last_ts = get_timestamp_ms();
+        si->addr = std::move(addr); // 更新地址
+        min_heap_.InsertOrUpdate(id, si, static_cast<int>(load) - static_cast<int>(prev_load));
+        return true;
     }
 }
 
@@ -65,9 +73,13 @@ std::pair<std::optional<ServerInfo>, bool> chatroom::status::LoadBalancer::GetMi
 void chatroom::status::LoadBalancer::CopyServerInfoList(std::vector<ServerInfo> &out) {
     std::unique_lock<std::mutex> lock(mtx_);
     out.clear();
-    for (const auto& item : hm_) {
-        out.push_back(*(item.second));
-    }
+    out.reserve(hm_.size());
+    // for (const auto& item : hm_) {
+    //     out.push_back(*(item.second));
+    // }
+    std::transform(hm_.begin(), hm_.end(), std::back_inserter(out), [](const auto& item) {
+        return *item.second;
+    });
 }
 
 uint32_t chatroom::status::LoadBalancer::CheckTTL() {

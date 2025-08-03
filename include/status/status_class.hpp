@@ -6,6 +6,7 @@
 #include "status/load_balancer.hpp"
 #include "status/redis/status_redis.hpp"
 #include "status/status_service_impl.hpp"
+#include "status/status_uploader.hpp"
 
 namespace chatroom::status {
     // 同步RPC的写法
@@ -13,6 +14,7 @@ namespace chatroom::status {
         private:
         RedisMgr* redis_mgr_;     // 不负责其生命周期管理
         LoadBalancer* load_balancer_;   
+        TimedUploader* uploader_;
 
         std::unique_ptr<grpc::Server> server_;
         std::unique_ptr<StatusServiceImpl> service_;      // FIXME
@@ -26,8 +28,8 @@ namespace chatroom::status {
         void Stop();
 
         // ctor
-        StatusRPCManager(RedisMgr* redis, LoadBalancer* load_balancer) :
-                redis_mgr_(redis), load_balancer_(load_balancer) {}
+        StatusRPCManager(RedisMgr* redis, LoadBalancer* load_balancer, TimedUploader* uploader) :
+                redis_mgr_(redis), load_balancer_(load_balancer), uploader_(uploader) {}
         
         // dtor
         ~StatusRPCManager() = default;
@@ -43,6 +45,7 @@ namespace chatroom::status {
         std::unique_ptr<StatusRPCManager> rpc_;
         std::unique_ptr<RedisMgr> redis_mgr_;
         std::unique_ptr<LoadBalancer> load_balancer_;
+        std::unique_ptr<TimedUploader> uploader_;
         bool running_{false};
         public:
 

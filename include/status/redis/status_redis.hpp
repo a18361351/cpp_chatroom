@@ -48,63 +48,22 @@ namespace chatroom::status {
         // URI, e.g. 'tcp://127.0.0.1', 'tcp://127.0.0.1:6379', or 'unix://path/to/socket'.
         //            Full URI scheme: 'tcp://[[username:]password@]host[:port][/db]' or
         //            unix://[[username:]password@]path-to-unix-domain-socket[/db]
-        void ConnectTo(const std::string& url) {
-            spdlog::info("RedisMgr connecting to {}", url);
-            if (redis_) {
-                redis_.reset();
-            }
-            redis_ = std::make_unique<sw::redis::Redis>(url);   // may throw
-            try {
-                spdlog::info("RedisMgr connection established");
-                RegisterScript();
-                spdlog::info("RedisMgr script registering");
-            } catch (const std::exception& e) {
-                spdlog::error("RedisMgr::ConnectTo() throws an exception: {}", e.what());
-                redis_.reset();
-                throw;
-            }
-        }
+        void ConnectTo(const std::string& url);
 
+
+        // @brief 连接到远程服务器，已连接的情况下会重新连接，连接失败时会抛出异常
+        // @param conn_opts Redis连接选项
+        // @param pool_opts Redis连接池的配置选项
         void ConnectTo(const sw::redis::ConnectionOptions& conn_opts, 
-                       const sw::redis::ConnectionPoolOptions& pool_opts = {}) 
-        {                
-            spdlog::info("RedisMgr connecting to {}", conn_opts.host);
-            if (redis_) {
-                redis_.reset();
-            }
-            redis_ = std::make_unique<sw::redis::Redis>(conn_opts, pool_opts);   // may throw
-            try {
-                spdlog::info("RedisMgr connection established");
-                RegisterScript();
-                spdlog::info("RedisMgr script registering");
-            } catch (const std::exception& e) {
-                spdlog::error("RedisMgr::ConnectTo() throws an exception: {}", e.what());
-                redis_.reset();
-                throw e;
-            }
-        }
+                       const sw::redis::ConnectionPoolOptions& pool_opts = {});
 
 
-        void UnregisterScript() {
-            if (!redis_) {
-                return;
-            }
-            redis_->script_flush();
-        }
+        void UnregisterScript();
         
-        void RegisterScript() {
-            if (!redis_) {
-                throw std::runtime_error("Redis connection not initialized");
-            }
-            // 加载脚本
-            // script_xxx = redis_->script_load("...");
-        }
+        void RegisterScript();
     
         // @brief 状态服务器同时将自己的服务器列表上传至Redis服务器
-        bool UpdateServerList(std::unordered_map<std::string, std::string>& serv_list) {
-            long long ans = redis_->hsetex("server_list", serv_list.begin(), serv_list.end(), std::chrono::milliseconds(40000));
-            return (ans == serv_list.size());
-        }
+        bool UpdateServerList(std::unordered_map<std::string, std::string>& serv_list);
 
     };
 };

@@ -18,7 +18,7 @@ void chatroom::status::StatusRPCManager::Run(const std::string& rpc_address) {
     if (!server_) {
         // StatusServiceImpl service(redis_mgr_, load_balancer_);
         assert(!service_);
-        service_ = std::make_unique<StatusServiceImpl>(redis_mgr_, load_balancer_);
+        service_ = std::make_unique<StatusServiceImpl>(redis_mgr_, load_balancer_, uploader_);
         
         grpc::ServerBuilder builder;
         builder.AddListeningPort(rpc_address, grpc::InsecureServerCredentials());
@@ -49,9 +49,13 @@ bool chatroom::status::StatusServer::RunStatusServer(const string& rpc_address, 
         redis_mgr_ = std::make_unique<RedisMgr>();
         redis_mgr_->ConnectTo(conn_opt, pool_opt);
 
+        // uploader initialize
+        uploader_ = std::make_unique<TimedUploader>(redis_mgr_.get(), load_balancer_.get());
+        uploader_->Start();
+
         // RPC manager initialize
         spdlog::info("gRPC Server init");
-        rpc_ = std::make_unique<StatusRPCManager>(redis_mgr_.get(), load_balancer_.get());
+        rpc_ = std::make_unique<StatusRPCManager>(redis_mgr_.get(), load_balancer_.get(), uploader_.get());
 
         spdlog::info("StatusServer starting");
         running_ = true;
@@ -63,9 +67,18 @@ bool chatroom::status::StatusServer::RunStatusServer(const string& rpc_address, 
 
 void chatroom::status::StatusServer::StopStatusServer() {
     if (running_) {
+        // RPC manager shutdown
         rpc_->Stop();
         rpc_.reset();
+
+        // Uploader shutdown
+        uploader_->Stop();
+        uploader_.reset();
+
+        // redis...
         redis_mgr_.reset();
+        
+        // balancer...
         load_balancer_.reset();
         running_ = false;
         spdlog::info("StatusServer stopped");

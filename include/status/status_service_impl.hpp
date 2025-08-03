@@ -6,6 +6,7 @@
 
 #include "status/load_balancer.hpp"
 #include "status/redis/status_redis.hpp"
+#include "status/status_uploader.hpp"
 
 namespace chatroom::status {
 
@@ -13,7 +14,7 @@ namespace chatroom::status {
         grpc::Status ReportServerLoad(grpc::ServerContext* ctx, const StatusReportReq* request, GeneralResp* response) override {
             auto srv = request->server_id();
             auto load = request->load();
-            bool ret = load_balancer_->UpdateServerLoad(srv, load);
+            bool ret = balancer_->UpdateServerLoad(srv, load);
             if (ret) {
                 response->set_ret(0);
                 return grpc::Status::OK;
@@ -27,10 +28,13 @@ namespace chatroom::status {
         }
         grpc::Status CheckMinimalLoadServer(grpc::ServerContext* context, const MinimalLoadServerReq* request, ServerAddrResp* response) override {
             // auto srv_addr = redis_mgr_->QueryMinimalLoadServerAddr();
-            auto si = load_balancer_->GetMinimalLoadServer();
-            if (!si) {
+            auto [si, updated] = balancer_->GetMinimalLoadServerInfo();
+            if (!si.has_value()) {
                 response->set_ret(1);
                 return {grpc::StatusCode::NOT_FOUND, "No server currently available."};
+            }
+            if (updated) {
+                uploader_->UpdateNow();
             }
             response->set_server_id(si->id);
             response->set_server_addr(si->addr);
@@ -38,7 +42,7 @@ namespace chatroom::status {
             return grpc::Status::OK;
         }
         grpc::Status RegisterServer(grpc::ServerContext* context, const ServerRegisterReq* request, GeneralResp* response) override {
-            bool ret = load_balancer_->RegisterServerInfo(request->server_id(), request->server_addr(), request->load());
+            bool ret = balancer_->RegisterServerInfo(request->server_id(), request->server_addr(), request->load());
             if (ret) {
                 response->set_ret(0);
                 return grpc::Status::OK;
@@ -52,12 +56,14 @@ namespace chatroom::status {
         }
 
         grpc::Status DumpServerList(grpc::ServerContext* context, const DumpServerListReq* request, ServerItemListResp* response) override {
-            for (auto item : load_balancer_->GetServerList()) {
+            std::vector<ServerInfo> out;
+            balancer_->CopyServerInfoList(out);
+            for (auto& item : out) {
                 auto* server_item = response->add_servers();
-                server_item->set_id(item->id);
-                server_item->set_addr(item->addr);
-                server_item->set_load(item->load);
-                server_item->set_last_ts(item->last_ts);
+                server_item->set_id(item.id);
+                server_item->set_addr(item.addr);
+                server_item->set_load(item.load);
+                server_item->set_last_ts(item.last_ts);
             }
             response->set_ret(0);
             return grpc::Status::OK;
@@ -65,15 +71,16 @@ namespace chatroom::status {
 
         public:
         // ctor
-        StatusServiceImpl(RedisMgr* redis, LoadBalancer* load_balancer) :
-            redis_mgr_(redis), load_balancer_(load_balancer) {}
+        StatusServiceImpl(RedisMgr* redis, LoadBalancer* load_balancer, TimedUploader* uploader) :
+            redis_mgr_(redis), balancer_(load_balancer), uploader_(uploader) {}
 
         // dtor
         ~StatusServiceImpl() override = default;
 
         private:
         RedisMgr* redis_mgr_;
-        LoadBalancer* load_balancer_;
+        LoadBalancer* balancer_;
+        TimedUploader* uploader_;
     };
 }
 
