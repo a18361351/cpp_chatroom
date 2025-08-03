@@ -21,10 +21,10 @@ namespace chatroom::gateway {
     
     class ReqHandler : public std::enable_shared_from_this<ReqHandler> {
         public:
-        
-        explicit ReqHandler(std::shared_ptr<DBM>&& dbm, std::shared_ptr<RedisMgr>&& redis, uint pool_size = 4) : 
+        explicit ReqHandler(std::shared_ptr<DBM> dbm, std::shared_ptr<RedisMgr> redis, std::shared_ptr<StatusRPCClient> rpc, uint pool_size = 4) : 
             dbm_(std::move(dbm)),
             redis_(std::move(redis)),
+            rpc_(std::move(rpc)),
             pool_(pool_size) {}
     
         ~ReqHandler() {

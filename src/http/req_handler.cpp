@@ -66,26 +66,25 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         return bad_request(std::move(req), "Invalid request format");
     }
 
-    spdlog::info("User %s attempt to login", username);
+    spdlog::info("User {} attempt to login", username);
     int db_ret = dbm_->VerifyUserInfo(username, passcode);
     switch (db_ret) {
         case GATEWAY_SUCCESS:
             // 登录成功
-            spdlog::info("User %s login successfully", username);    
+            spdlog::info("User {} login successfully", username);    
             break;
         case GATEWAY_USER_NOT_EXIST: case GATEWAY_VERIFY_FAILED:
-            spdlog::info("Incorrect login attempt by user %s", username);
+            spdlog::info("Incorrect login attempt by user {}", username);
             return forbidden_request(std::move(req), "Incorrect login username or password");   // 对客户隐藏具体的错误信息
         case GATEWAY_MYSQL_SERVER_ERROR:
             spdlog::error("Mysql server error when user {} login", username);
-            return bad_request(std::move(req), "Server error");
+            return server_error(std::move(req), "Server error");
         case GATEWAY_UNKNOWN_ERROR: default:
             spdlog::error("Unknown error when user {} login", username);
-            return bad_request(std::move(req), "Server error");
+            return server_error(std::move(req), "Server error");
     }
     // 生成用户的token
     string token = TokenGenerator();
-    // TODO(user): redis op
     redis_->RegisterUserToken(token, username, 300); // 默认5分钟的token存活时间
 
     // 通过RPC获取服务器信息
@@ -96,7 +95,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     grpc::Status rpc_status = stub->CheckMinimalLoadServer(&ctx, rpc_req, &rpc_resp);
     if (!rpc_status.ok()) {
         spdlog::error("Status RPC call failed: {}", rpc_status.error_message());
-        return bad_request(std::move(req), "Server error"); // 对客户隐藏具体的错误信息
+        return server_error(std::move(req), "Server error"); // 对客户隐藏具体的错误信息
     }
 
     auto addr = rpc_resp.server_addr();
@@ -135,20 +134,20 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
         spdlog::error("Error occured when parsing json");
         return bad_request(std::move(req), "Invalid request format");
     }
-    spdlog::info("Attempt to register a new user %s", username);
+    spdlog::info("Attempt to register a new user {}", username);
     int db_ret = dbm_->RegisterNew(username, passcode);
     switch (db_ret) {
         case GATEWAY_SUCCESS:
-            spdlog::info("User %s register successfully", username);
+            spdlog::info("User {} register successfully", username);
         case GATEWAY_REG_ALREADY_EXIST:
-            spdlog::info("Duplicated register attempt by username %s", username);
+            spdlog::info("Duplicated register attempt by username {}", username);
             return forbidden_request(std::move(req), "Username already exists");   
         case GATEWAY_MYSQL_SERVER_ERROR:
             spdlog::error("Mysql server error when user {} register", username);
-            return bad_request(std::move(req), "MySQL server error");
+            return server_error(std::move(req), "MySQL server error");
         case GATEWAY_UNKNOWN_ERROR: default:
             spdlog::error("Unknown error when user {} register", username);
-            return bad_request(std::move(req), "Server error");
+            return server_error(std::move(req), "Server error");
     }
     Json::Value resp_json;
     Json::StreamWriterBuilder writer;

@@ -21,6 +21,7 @@
 #include "http/req_handler.hpp"
 
 namespace chatroom::gateway {
+    // TODO(user): 命名
     class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
         friend class HTTPServer;
         public:
@@ -47,14 +48,14 @@ namespace chatroom::gateway {
         boost::beast::tcp_stream sock_;
         boost::beast::flat_buffer buf_{8192};
         boost::beast::http::request<boost::beast::http::string_body> req_;
-        std::shared_ptr<ReqHandler> handler_;
+        std::shared_ptr<ReqHandler> handler_;   // 异步处理时，需要保证ReqHandler对象有效
     };
     
     class HTTPServer : public std::enable_shared_from_this<HTTPServer> {
         public:
         // ctor
         // @warning HTTPServer本身不负责DBM的启动与关闭，在Start()之前DBM应该是启动好了的
-        HTTPServer(boost::asio::io_context& ctx, const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<DBM> dbm);
+        HTTPServer(boost::asio::io_context& ctx, const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<ReqHandler> req);
     
         // @brief 开始运行服务器，具体来说是开始接受新连接
         void Start() {

@@ -8,6 +8,9 @@ add_executable(http_gate
     gateway_main.cpp 
     http_server.cpp
     req_handler.cpp
+    # grpc protos
+    ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
+    ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
 )
 
 # 包含头文件目录
@@ -23,10 +26,17 @@ target_include_directories(http_gate
 target_link_libraries(http_gate
     PRIVATE
         Boost::system
+        # Redis++
+        ${HIREDIS_LIB}
+        ${REDIS_PLUS_PLUS_LIB}
+        # grpc
+        gRPC::grpc++
         # Jsoncpp support
         jsoncpp_lib
+        # boost.mysql && Openssl
         Threads::Threads
         OpenSSL::Crypto
         OpenSSL::SSL
+        # spdlog
         spdlog::spdlog
 )
