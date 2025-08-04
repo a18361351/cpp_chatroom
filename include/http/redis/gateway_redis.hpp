@@ -7,8 +7,6 @@
 
 #include "common/redis/base_redis_mgr.hpp"
 
-using namespace std;
-
 namespace chatroom::gateway {
     // Redis类管理器：负责独占Redis对象，并管理其生命周期
     class RedisMgr : public chatroom::BaseRedisMgr {
