@@ -34,7 +34,7 @@ namespace chatroom::status {
                 return {grpc::StatusCode::NOT_FOUND, "No server currently available."};
             }
             if (updated) {
-                uploader_->UpdateNow();
+                uploader_->UpdateNow(); // 显式更新一次服务器列表（异步）
             }
             response->set_server_id(si->id);
             response->set_server_addr(si->addr);
@@ -45,6 +45,7 @@ namespace chatroom::status {
             bool ret = balancer_->RegisterServerInfo(request->server_id(), request->server_addr(), request->load());
             if (ret) {
                 response->set_ret(0);
+                uploader_->UpdateNow(); // 显式更新一次服务器列表（异步）
                 return grpc::Status::OK;
             } else {
                 response->set_ret(1); // 注册失败

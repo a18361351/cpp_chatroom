@@ -46,7 +46,7 @@ std::pair<bool, std::optional<std::string>> chatroom::gateway::RedisMgr::UserLog
     user_data["user_id"] = user_id;
     user_data["last_login"] = std::to_string(GetTimestamp());
     long long field_set = GetRedis().hsetex(key, user_data.begin(), user_data.end(), std::chrono::milliseconds(60000));
-    if (field_set != user_data.size()) {
+    if (field_set != 1) {
         return {false, nullopt};
     }
     return {true, nullopt};

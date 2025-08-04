@@ -16,5 +16,5 @@ bool chatroom::status::RedisMgr::UpdateServerList(std::unordered_map<std::string
         return !pong.empty();
     }
     long long ans = GetRedis().hsetex("server_list", serv_list.begin(), serv_list.end(), std::chrono::milliseconds(40000));
-    return (ans == serv_list.size());
+    return ans;
 }
