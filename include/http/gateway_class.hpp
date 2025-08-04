@@ -46,24 +46,6 @@ namespace chatroom::gateway {
             http_ = std::make_shared<HTTPServer>(http_ctx_, http_ep, handler_);
         }
 
-        GatewayClass(boost::asio::io_context& http_ctx, 
-                     const boost::asio::ip::tcp::endpoint& http_ep, 
-                     const std::string& redis_ep,
-                     const std::string& status_ep) : 
-            http_ctx_(http_ctx)
-            , dbm_(std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port))
-            , redis_mgr_(std::make_shared<RedisMgr>(redis_ep))
-            , status_rpc_(std::make_shared<StatusRPCClient>(status_ep))
-            , handler_(std::make_shared<ReqHandler>(dbm_, redis_mgr_, status_rpc_))
-            , http_(std::make_shared<HTTPServer>(http_ctx, http_ep, handler_))
-            // , dbm_(std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port))
-            // , redis_mgr_(std::make_shared<RedisMgr>(redis_ep))
-            // , http_(std::make_shared<HTTPServer>(http_ctx_, http_ep, dbm_))
-            // , status_rpc_(std::make_unique<StatusRPCClient>(status_ep))
-        {
-            spdlog::info("GatewayClass initialized");
-        }
-
         ~GatewayClass() {
             spdlog::info("GatewayClass terminating");
         }

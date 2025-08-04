@@ -8,6 +8,8 @@ add_executable(status_server
     redis/status_redis.cpp
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
+    # common
+    ${CMAKE_SOURCE_DIR}/src/common/base_redis_mgr.cpp
 )
 
 # 包含头文件目录

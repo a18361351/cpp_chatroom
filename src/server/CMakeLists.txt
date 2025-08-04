@@ -7,6 +7,8 @@ add_executable(chat_server
     io_context_pool.cpp
     io_thread_pool.cpp
     logic.cpp
+    # common
+    ${CMAKE_SOURCE_DIR}/src/common/base_redis_mgr.cpp
 )
 
 # 包含头文件目录

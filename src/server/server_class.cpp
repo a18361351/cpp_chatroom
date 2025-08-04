@@ -1,12 +1,12 @@
 #include <cstdio>
 #include <memory>
 
+#include "log/log_manager.hpp"
 #ifdef USING_IOCONTEXT_POOL
 #include "server/io_context_pool.hpp"
 #elif defined(USING_IOTHREAD_POOL)
 #include "server/io_thread_pool.hpp"
 #endif
-
 #include "server/server_class.hpp"
 #include "server/session.hpp"
 

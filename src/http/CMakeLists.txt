@@ -3,7 +3,8 @@
 add_executable(http_gate
     dbm/dbconn.cpp 
     dbm/gateway_dbm.cpp 
-    dbm/security.cpp 
+    dbm/security.cpp
+    redis/gateway_redis.cpp 
     gateway_class.cpp
     gateway_main.cpp 
     http_server.cpp
@@ -11,6 +12,8 @@ add_executable(http_gate
     # grpc protos
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
+    # common
+    ${CMAKE_SOURCE_DIR}/src/common/base_redis_mgr.cpp
 )
 
 # 包含头文件目录
