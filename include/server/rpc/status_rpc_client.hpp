@@ -1,5 +1,5 @@
-#ifndef GATEWAY_RPC_CLIENT
-#define GATEWAY_RPC_CLIENT
+#ifndef SERVER_STATUS_RPC_CLIENT
+#define SERVER_STATUS_RPC_CLIENT
 
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>

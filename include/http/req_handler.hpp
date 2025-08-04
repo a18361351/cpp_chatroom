@@ -9,7 +9,7 @@
 #include <boost/beast/http/message_generator.hpp>
 #include <boost/beast/http/string_body.hpp>
 
-#include "http/gateway_rpc.hpp"
+#include "http/rpc/status_rpc_client.hpp"
 #include "log/log_manager.hpp"
 #include "http/dbm/gateway_dbm.hpp"
 #include "http/redis/gateway_redis.hpp"

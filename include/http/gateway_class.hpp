@@ -13,7 +13,7 @@
 #include "http/dbm/gateway_dbm.hpp"
 #include "http/redis/gateway_redis.hpp"
 #include "http/http_server.hpp"
-#include "http/gateway_rpc.hpp"
+#include "http/rpc/status_rpc_client.hpp"
 
 const std::string mysql_addr = "192.168.56.101";
 const int mysql_port = 3306;
