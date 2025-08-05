@@ -13,7 +13,7 @@ add_executable(http_gate
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
     ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
     # common
-    ${CMAKE_SOURCE_DIR}/src/common/base_redis_mgr.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/redis/base_redis_mgr.cpp
 )
 
 # 包含头文件目录

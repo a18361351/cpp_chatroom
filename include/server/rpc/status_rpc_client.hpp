@@ -7,7 +7,7 @@
 #include "protocpp/status.grpc.pb.h"
 #include "protocpp/status.pb.h"
 
-namespace chatroom::gateway {
+namespace chatroom::backend {
     // 同步RPC的写法
     class StatusRPCClient {
         private:
