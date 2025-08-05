@@ -12,7 +12,7 @@ namespace chatroom::backend {
     class StatusRPCClient {
         private:
         std::shared_ptr<grpc::Channel> ch_status_;
-        std::unique_ptr<status::StatusService::Stub> status_;
+        // std::unique_ptr<status::StatusService::Stub> status_;
         public:
         // ctor
         // 建立与远端的RPC连接
@@ -23,14 +23,12 @@ namespace chatroom::backend {
         // dtor
         ~StatusRPCClient() = default;
 
-        // @warning Client对象持有该对象的生命周期，不要尝试delete返回的指针
-        // @warning Stub对象不是线程安全的
-        status::StatusService::Stub* GetStatusStub() {
+        // @brief 获取对应RPC Channel的线程专属存根（Stub）对象
+        // @warning 请不要跨线程传递该Stub指针
+        status::StatusService::Stub* GetThreadStatusStub() {
             if (ch_status_) {
-                if (!status_) {
-                    status_ = std::make_unique<status::StatusService::Stub>(ch_status_);
-                }
-                return status_.get();
+                thread_local std::unique_ptr<status::StatusService::Stub> local_stub = std::make_unique<status::StatusService::Stub>(ch_status_);
+                return local_stub.get();
             }
             return nullptr;
         }

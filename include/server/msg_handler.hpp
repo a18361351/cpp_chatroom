@@ -19,7 +19,7 @@
 
 namespace chatroom::backend {
     enum TagType {
-        UNKNOWN = 0,
+        DEBUG = 0,      // 用于调试的消息格式，收到后把消息显示在日志上
         VERIFY,         // JSON格式的身份验证消息
         CHAT_MSG,       // 格式：[uint64_t: 目标id][消息内容]
         CHAT_MSG_TOCLI,    // 发送给客户端的聊天消息，格式：[uint64_t：发送者id][消息内容]

@@ -121,6 +121,7 @@ void chatroom::backend::Session::ReceiveHead() {
             uint32_t content_len = self->recv_ptr_->UpdateContentLenField();
             if (content_len > MAX_CTX_LEN) {
                 // 超出最大报文长度了！
+                spdlog::error("Message content length exceed: {}", content_len);
                 self->sock_.close();
                 return;
             }

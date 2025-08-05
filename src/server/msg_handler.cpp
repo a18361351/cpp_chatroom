@@ -60,6 +60,10 @@ void chatroom::backend::MsgHandler::Worker() {
 void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& msg) {
     uint32_t msg_type = msg->GetTagField();
     switch (msg_type) {
+        case DEBUG:
+        {
+            spdlog::debug(std::string(msg->GetContent(), msg->GetContentLen()));
+        }
         case VERIFY:
         {
             spdlog::debug("Verify message received");
