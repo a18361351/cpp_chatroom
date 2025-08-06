@@ -47,9 +47,10 @@ void DBConn::ReconnectImpl(boost::mysql::error_code& err, std::string_view usern
         login_check_stmt = conn.prepare_statement("SELECT uid, passcode FROM tbl_user WHERE username = ?");
         exist_check_stmt = conn.prepare_statement("SELECT COUNT(*) FROM tbl_user WHERE username = ?");
         register_stmt = conn.prepare_statement("INSERT INTO tbl_user (uid, username, passcode) VALUES (?, ?, ?)");
-    } catch (const boost::mysql::error_code& ec) {
+    } catch (const boost::mysql::error_with_diagnostics &ec) {
         // 关闭连接防止连接泄漏
-        spdlog::error("Failed to prepare statements in DBConn: {}", ec.message());
+
+        spdlog::error("Failed to prepare statements in DBConn: {}, db diag: {}", ec.what(), ec.get_diagnostics().server_message());
         this->Close();
         // valid_ = false;
     }
