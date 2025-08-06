@@ -18,11 +18,6 @@ int main() {
         // 实现程序的优雅退出，监听SIGINT和SIGTERM
         boost::asio::signal_set sigset(ctx, SIGINT, SIGTERM);
         
-        sigset.async_wait([&ctx](const errcode& err, int sig) {
-            // 收到了信号
-            printf("Stopping\n");
-            ctx.stop();
-        });
 
         // 指定本地端口
         ip::tcp::endpoint local(ip::tcp::v4(), 1234);
@@ -41,6 +36,14 @@ int main() {
         
 
         chatroom::backend::ServerClass srv(server_id, ctx, status_rpc_addr, conn_opt, pool_opt);
+        
+        
+        sigset.async_wait([&ctx, &srv](const errcode& err, int sig) {
+            // 收到了信号
+            printf("Stopping\n");
+            ctx.stop();
+        });
+        
         srv.Listen(local);  // 监听
 
 

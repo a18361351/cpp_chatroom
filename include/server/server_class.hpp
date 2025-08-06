@@ -65,6 +65,8 @@ namespace chatroom::backend {
     #elif defined(USING_IOTHREAD_POOL)
         Singleton<IOThreadPool>::GetInstance().Stop();
     #endif
+            reporter_->Stop();
+            handler_->Stop();
         }
     private:
     

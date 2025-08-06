@@ -34,8 +34,9 @@ bool chatroom::backend::MsgHandler::Stop() {
     running_ = false;
     lock.unlock();  // *********** EXIT CRITICAL **********
     cv_.notify_all();
-
+    
     worker_.join();
+    spdlog::info("MsgHandler worker thread exited");
     // worker_ = std::thread(); // MsgHandler没有重复使用的需求
     lock.lock();
     return true;
