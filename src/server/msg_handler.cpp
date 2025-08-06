@@ -1,3 +1,5 @@
+#include <jsoncpp/json/json.h>
+
 #include "log/log_manager.hpp"
 #include "server/msg_handler.hpp"
 #include "utils/field_op.hpp"
@@ -67,6 +69,42 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
         case VERIFY:
         {
             spdlog::debug("Verify message received");
+            if (sess->IsVerified()) {
+                // 无需重复验证
+                return;
+            }
+            Json::Value root;
+            Json::Reader reader;
+            std::string token;
+            uint64_t uid;
+            if (!reader.parse(msg->GetContent(), root)) {
+                // 无效的验证请求，其无法被解析为JSON
+                spdlog::error("Invalid verify message");
+                sess->Close();  // 关闭会话
+                sess_mgr_->RemoveTempSession(sess.get());
+                return;
+            }
+            try {
+                token = root["token"].asString();
+                uid = root["uid"].asUInt64();
+            } catch (std::exception& e) {
+                spdlog::error("Invalid verify message");
+                sess->Close();  // 关闭会话
+                sess_mgr_->RemoveTempSession(sess.get());
+                return;
+            }
+            // 验证过程
+            std::optional<uint64_t> ans_uid = redis_->VerifyUser(token);
+            if (!ans_uid.has_value() || ans_uid != uid) {
+                // 错误或过期的token
+                spdlog::error("User attempt to verify with wrong/expired token");
+                sess->Close();  // 关闭会话
+                sess_mgr_->RemoveTempSession(sess.get());
+                return;
+            }
+            // 否则验证成功
+            sess->SetVerified(uid);
+            sess->Send("Welcome to the chatroom!", VERIFY_DONE);
         }
         break;
         case CHAT_MSG:

@@ -25,12 +25,18 @@ namespace chatroom::backend {
     class MsgHandler;
     class Session : public std::enable_shared_from_this<Session> {
         friend class SessionManager;
+        friend class ServerClass;
         public:
         // 添加对strand的支持
-        Session(boost::asio::io_context& ctx) : 
-            recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE)), 
-            sock_(ctx), 
-            strand_(ctx.get_executor()) // strand保护在多个线程同时执行回调的情况下，不会并发调用回调
+        Session(boost::asio::io_context& ctx, 
+                std::weak_ptr<MsgHandler> handler,
+                std::weak_ptr<SessionManager> mgr) : 
+            user_id_(0) // unset
+            , recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE))
+            , sock_(ctx)
+            , strand_(ctx.get_executor()) // strand保护在多个线程同时执行回调的情况下，不会并发调用回调
+            , handler_(std::move(handler))
+            , mgr_(std::move(mgr))
             {}
 
         Session(boost::asio::io_context& ctx, 
@@ -78,7 +84,7 @@ namespace chatroom::backend {
             return recv_ptr_;
         }
     
-    public:
+        public:
         using msg_ptr = std::shared_ptr<MsgNode>;
         using locker = std::unique_lock<std::mutex>;
     
@@ -92,16 +98,37 @@ namespace chatroom::backend {
     
         // Session对外的发送接口3，函数会将已有的消息放入队列中等待发送
         void Send(std::shared_ptr<MsgNode> msg);
-    
-        // 获取
+
+        // @brief 关闭会话的连接，所有异步读写都会被中断
+        void Close() {
+            down_ = true;
+            // 异步操作会被中断
+            sock_.close();
+        }
+        
+        // 用于客户端验证
+        bool IsVerified() const {
+            return verified_;
+        }
+        
+        void SetVerified(UID user_id) {
+            if (!verified_) {
+                user_id_ = user_id;
+                verified_ = true;
+            }
+        }
+        
+        private:
         // 只要还有数据要发送，QueueSend就会一直被调用
         void QueueSend();
-    private:
-        // TODO(user): 发送队列可以设置长度限制，以保证不会产生发送速率过快的情况
-        // -----------------------
 
+        private:
+        // 会话成员变量
+        // TODO(user): 发送队列可以设置长度限制，以保证不会产生发送速率过快的情况
+        // TODO(user): 设置超时相关的实现（如自动定时器），并在Session处实现
         // ***** 用户相关 *****
         UID user_id_;  // 这里sess_id == user_id
+        bool verified_{false};
         // ***** 接收操作 *****
         std::shared_ptr<MsgNode> recv_ptr_;
         // ***** 发送操作 *****

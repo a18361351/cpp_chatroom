@@ -1,5 +1,5 @@
-#ifndef UTIL_CLASS_HEADER
-#define UTIL_CLASS_HEADER
+#ifndef UTIL_CLASSES_HEADER
+#define UTIL_CLASSES_HEADER
 
 // 懒汉式单例实现
 // 使用时直接使用Singleton<Type>::GetInstance()即可

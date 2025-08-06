@@ -59,7 +59,10 @@ namespace chatroom::backend {
 
     
     void StatusReporter::ReportImpl() {
-        rpc_impl_.ReportLoad(server_id_, sess_mgr_->GetSessionCount());
+        uint32_t sess_count = sess_mgr_->GetSessionCount();
+        uint32_t tmps_count = sess_mgr_->GetTempSessionCount();
+        spdlog::info("Reporting load: {} sessions, {} temporary sessions", sess_count, tmps_count);
+        rpc_impl_.ReportLoad(server_id_, sess_count + tmps_count);
     }
     void StatusReporter::StartTimer() {
         timer_.async_wait([this](const boost::system::error_code &ec) {

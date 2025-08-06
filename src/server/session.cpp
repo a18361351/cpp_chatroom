@@ -63,6 +63,8 @@ void chatroom::backend::Session::QueueSend()  {
         // callback
         if (err) {
             // tell that error!
+            spdlog::error("Error occured in Session::QueueSend(): {}", err.what());
+            self->Close();
             return;
         }
 
@@ -82,7 +84,7 @@ void chatroom::backend::Session::QueueSend()  {
             continue_flag = !self->send_q_.empty();
         }
         // 鉴于消费者只有一个，不用担心在临界区之间的间隙中该队列变空
-        if (continue_flag) {
+        if (continue_flag && !self->down_) {
             self->QueueSend();
         }
     };
@@ -111,6 +113,10 @@ void chatroom::backend::Session::ReceiveHead() {
             }
             // tell that error!
             spdlog::error("Error occured in ReceiveContent(): {}", err.what().c_str());
+            self->Close();
+            return;
+        }
+        if (self->down_) {  // 检查会话状态
             return;
         }
         // cur_pos更新
@@ -122,7 +128,7 @@ void chatroom::backend::Session::ReceiveHead() {
             if (content_len > MAX_CTX_LEN) {
                 // 超出最大报文长度了！
                 spdlog::error("Message content length exceed: {}", content_len);
-                self->sock_.close();
+                self->Close();
                 return;
             }
             if (content_len + HEAD_LEN > self->recv_ptr_->max_len_) {
@@ -149,6 +155,10 @@ void chatroom::backend::Session::ReceiveContent() {
             }
             // tell that error!
             spdlog::error("Error occured in ReceiveContent(): {}", err.what().c_str());
+            self->Close();
+            return;
+        }
+        if (self->down_) {  // 检查会话状态
             return;
         }
         // cur_pos更新

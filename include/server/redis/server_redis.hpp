@@ -5,13 +5,14 @@
 
 namespace chatroom::backend {
     class RedisMgr : public chatroom::BaseRedisMgr {
+        public:
         // ctors
         RedisMgr() = default;
         
         // dtors
         ~RedisMgr() override = default;
 
-        
+        std::optional<uint64_t> VerifyUser(std::string_view token);
     };
 }
 

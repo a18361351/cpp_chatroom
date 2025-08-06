@@ -1,38 +1,69 @@
+#include "log/log_manager.hpp"
 #include "server/session.hpp"
 #include "server/session_manager.hpp"
 
-bool chatroom::backend::SessionManager::StopSession(UID sess_id) {
-    std::unique_lock lock(lck_);
-    auto it = sess_.find(sess_id);
-    if (it != sess_.end()) {
-        it->second->down_ = true;
-        it->second->sock_.close();
-        sess_.erase(it);
-        return true;
-    }
-    return false;
-}
-        // @brief 添加Session对象到管理器中
-bool chatroom::backend::SessionManager::AddSession(UID sess_id, std::shared_ptr<Session> sess) {
-    std::unique_lock lock(lck_);
-    if (sess_.find(sess_id) != sess_.end()) {
+namespace chatroom::backend {
+    bool chatroom::backend::SessionManager::StopSession(UID sess_id) {
+        std::unique_lock lock(lck_);
+        auto it = sess_.find(sess_id);
+        if (it != sess_.end()) {
+            it->second->down_ = true;
+            it->second->sock_.close();
+            sess_.erase(it);
+            return true;
+        }
         return false;
     }
-    sess_.insert({sess_id, std::move(sess)});
-    return true;
-}
-
-// @brief 获取当前SessionManager中所有有效的Session的个数
-uint32_t chatroom::backend::SessionManager::GetSessionCount() const {
-    std::unique_lock lock(lck_);
-    return sess_.size();
-}
-
-std::shared_ptr<chatroom::backend::Session> chatroom::backend::SessionManager::GetSession(UID sess_id) {
-    std::unique_lock lock(lck_);
-    auto it = sess_.find(sess_id);
-    if (it != sess_.end()) {
-        return it->second;
+    
+    bool SessionManager::AddTempSession(std::shared_ptr<Session> sess) {
+        std::unique_lock lock(temp_lck_);
+        auto key = sess.get();
+        // 等待到验证之后，我们才能够把其放到根据UID编号的数据结构中
+        return temp_sess_.try_emplace(key, std::move(sess)).second;
     }
-    return nullptr;
+    
+    bool SessionManager::AddSession(UID sess_id, std::shared_ptr<Session> sess) {
+        std::unique_lock lock(lck_);
+        std::unique_lock temp_lock(temp_lck_);
+
+        // 将会话从临时列表中移除
+        if (temp_sess_.erase(sess.get()) == 0) {
+            // not present in temporary list, whatever
+            spdlog::warn("Verified Session not found in temporary list");
+        }
+        temp_lock.unlock(); // 解锁，减小锁粒度
+
+        // 尝试插入 UID -> SessPtr
+        return sess_.try_emplace(sess_id, std::move(sess)).second;
+    }
+    
+    bool SessionManager::RemoveTempSession(Session* sess_ptr) {
+        std::unique_lock temp_lock(temp_lck_);
+        return temp_sess_.erase(sess_ptr) == 1;
+    }
+
+    uint32_t SessionManager::GetSessionCount() {
+        std::unique_lock lock(lck_);
+        return sess_.size();
+    }
+
+    uint32_t SessionManager::GetTempSessionCount() {
+        std::unique_lock lock(temp_lck_);
+        return temp_sess_.size();
+    }
+
+    uint32_t SessionManager::GetTotalSessionCount() {
+        std::unique_lock lock(lck_);
+        std::unique_lock temp_lock(temp_lck_);
+        return sess_.size() + temp_sess_.size();
+    }
+    
+    std::shared_ptr<Session> SessionManager::GetSession(UID sess_id) {
+        std::unique_lock lock(lck_);
+        auto it = sess_.find(sess_id);
+        if (it != sess_.end()) {
+            return it->second;
+        }
+        return nullptr;
+    }
 }

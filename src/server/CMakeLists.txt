@@ -4,9 +4,15 @@ add_executable(chat_server
     server_main.cpp
     server_class.cpp
     session.cpp
-    io_context_pool.cpp
-    io_thread_pool.cpp
-    logic.cpp
+    session_manager.cpp
+    status_reporter.cpp
+    msg_handler.cpp
+    redis/server_redis.cpp
+    # io_context_pool.cpp
+    # io_thread_pool.cpp
+    # status grpc
+    ${CMAKE_SOURCE_DIR}/proto/protocpp/status.grpc.pb.cc
+    ${CMAKE_SOURCE_DIR}/proto/protocpp/status.pb.cc
     # common
     ${CMAKE_SOURCE_DIR}/src/common/redis/base_redis_mgr.cpp
 )
@@ -36,4 +42,10 @@ target_link_libraries(chat_server
         Threads::Threads
         OpenSSL::Crypto
         OpenSSL::SSL
+        # grpc
+        gRPC::grpc++
+        # Jsoncpp support
+        jsoncpp_lib
+        # spdlog
+        spdlog::spdlog
 )
