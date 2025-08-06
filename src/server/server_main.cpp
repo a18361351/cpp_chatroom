@@ -11,6 +11,8 @@ using namespace boost::asio;
 
 const uint32_t server_id = 100;
 const string status_rpc_addr = "192.168.56.101:3000";
+const uint32_t listen_port = 1235;
+const string server_addr = std::string("192.168.56.101:") + std::to_string(listen_port);
 
 int main() {
     try {
@@ -20,7 +22,7 @@ int main() {
         
 
         // 指定本地端口
-        ip::tcp::endpoint local(ip::tcp::v4(), 1234);
+        ip::tcp::endpoint local(ip::tcp::v4(), listen_port);
 
         // redis service
         sw::redis::ConnectionOptions conn_opt; // 连接到的服务器选项
@@ -35,7 +37,7 @@ int main() {
         pool_opt.connection_lifetime = std::chrono::minutes(10);    // 连接的最大生命时长，超过时长连接会过期并重新建立
         
 
-        chatroom::backend::ServerClass srv(server_id, ctx, status_rpc_addr, conn_opt, pool_opt);
+        chatroom::backend::ServerClass srv(server_id, server_addr, ctx, status_rpc_addr, conn_opt, pool_opt);
         
         
         sigset.async_wait([&ctx, &srv](const errcode& err, int sig) {

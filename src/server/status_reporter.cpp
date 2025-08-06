@@ -4,9 +4,11 @@
 // status_reporter.cpp: 后台服务器向状态服务器报告自身负载状态的类
 
 #include "server/status_reporter.hpp"
+#include <grpcpp/support/status.h>
+#include <spdlog/spdlog.h>
 
 namespace chatroom::backend {
-    bool StatusReportRPCImpl::ReportLoad(uint32_t id, uint32_t load) {
+    grpc::Status StatusReportRPCImpl::ReportLoad(uint32_t id, uint32_t load) {
         auto stub = rpc_client_->GetThreadStatusStub();
         grpc::ClientContext ctx;
         chatroom::status::StatusReportReq req;
@@ -14,10 +16,10 @@ namespace chatroom::backend {
         req.set_server_id(id);
         req.set_load(load);
         auto rpc_status = stub->ReportServerLoad(&ctx, req, &resp);
-        return rpc_status.ok();
+        return rpc_status;
     }
 
-    bool StatusReportRPCImpl::ReportServerRegister(uint32_t id, const std::string& serv_addr, uint32_t load) {
+    grpc::Status StatusReportRPCImpl::ReportServerRegister(uint32_t id, const std::string& serv_addr, uint32_t load) {
         auto stub = rpc_client_->GetThreadStatusStub();
         grpc::ClientContext ctx;
         chatroom::status::ServerRegisterReq req;
@@ -26,12 +28,12 @@ namespace chatroom::backend {
         req.set_server_addr(serv_addr);
         req.set_load(load);
         auto rpc_status = stub->RegisterServer(&ctx, req, &resp);
-        return rpc_status.ok();
+        return rpc_status;
     }
-    bool StatusReportRPCImpl::ReportServerLeave() {
+    grpc::Status StatusReportRPCImpl::ReportServerLeave() {
         auto stub = rpc_client_->GetThreadStatusStub();
         // TODO(user): Implement ServerLeave interface in status service
-        return false;
+        return {grpc::StatusCode::UNIMPLEMENTED, "Not implemented"};
     }
 
 
@@ -43,8 +45,12 @@ namespace chatroom::backend {
             ResetTimer();
         });
     }
-    void StatusReporter::Register(const std::string& addr) {
-        rpc_impl_.ReportServerRegister(server_id_, addr, sess_mgr_->GetSessionCount());
+    bool StatusReporter::Register(const std::string& addr) {
+        auto ret = rpc_impl_.ReportServerRegister(server_id_, addr, sess_mgr_->GetSessionCount());
+        if (!ret.ok()) {
+            spdlog::error("StatusReporter register rpc call failed: {}", ret.error_message());
+        }
+        return ret.ok();
     }
     void StatusReporter::Stop() {
         // stopped_ = true;
@@ -62,7 +68,10 @@ namespace chatroom::backend {
         uint32_t sess_count = sess_mgr_->GetSessionCount();
         uint32_t tmps_count = sess_mgr_->GetTempSessionCount();
         spdlog::info("Reporting load: {} sessions, {} temporary sessions", sess_count, tmps_count);
-        rpc_impl_.ReportLoad(server_id_, sess_count + tmps_count);
+        auto ret = rpc_impl_.ReportLoad(server_id_, sess_count + tmps_count);
+        if (!ret.ok()) {
+            spdlog::error("StatusReporter report rpc call failed: {}", ret.error_message());
+        }
     }
     void StatusReporter::StartTimer() {
         timer_.async_wait([this](const boost::system::error_code &ec) {

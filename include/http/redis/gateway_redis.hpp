@@ -27,7 +27,7 @@ namespace chatroom::gateway {
         void RegisterUserToken(std::string_view token, std::string_view user_id, long long ttl = 300);
 
         // @return {bool, string}: 操作是否成功，以及如果用户已经登录的话，其所在的服务器编号
-        std::pair<bool, std::optional<std::string>> UserLoginAttempt(std::string_view user_id);
+        std::pair<bool, std::optional<std::string>> UserLoginAttempt(std::string_view user_id, std::string_view user_name);
     };
 }
 

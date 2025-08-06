@@ -103,7 +103,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     auto addr = rpc_resp.server_addr();
 
     // 检查用户的登录状态
-    auto check_result = redis_->UserLoginAttempt(username);
+    auto check_result = redis_->UserLoginAttempt(std::to_string(uid), username);
     if (!check_result.first) { // 尝试登录请求失败：用户已登录或无法查询在线状态
         if (!check_result.second.has_value()) { // 无法查询在线状态
             spdlog::error("Redis UserLoginAttempt failed");
@@ -117,7 +117,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
 
     // 生成用户的token
     string token = TokenGenerator();
-    redis_->RegisterUserToken(token, std::to_string(uid), 300); // 默认5分钟的token存活时间
+    redis_->RegisterUserToken(token, std::to_string(uid), 50); // 默认50秒的token存活时间
     
     // 现在，把token以及服务器地址打包，发送给用户
     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -159,6 +159,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
     switch (db_ret) {
         case GATEWAY_SUCCESS:
             spdlog::info("User {} registered successfully, uid = {}", username, uid);
+            break;
         case GATEWAY_REG_ALREADY_EXIST:
             spdlog::info("Duplicated register attempt by username {}", username);
             return forbidden_request(std::move(req), "Username already exists");   

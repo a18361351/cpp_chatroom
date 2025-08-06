@@ -23,9 +23,9 @@ namespace chatroom::backend {
         std::shared_ptr<StatusRPCClient> rpc_client_;
         public:
         StatusReportRPCImpl(std::shared_ptr<StatusRPCClient> rpc_cli) : rpc_client_(std::move(rpc_cli)) {}
-        bool ReportLoad(uint32_t id, uint32_t load);
-        bool ReportServerRegister(uint32_t id, const std::string& serv_addr, uint32_t load);
-        bool ReportServerLeave();
+        grpc::Status ReportLoad(uint32_t id, uint32_t load);
+        grpc::Status ReportServerRegister(uint32_t id, const std::string& serv_addr, uint32_t load);
+        grpc::Status ReportServerLeave();
         StatusRPCClient& GetClient() {
             return *rpc_client_;
         }
@@ -58,7 +58,7 @@ namespace chatroom::backend {
         void UpdateNow();
 
         // @brief 进行服务器在状态服务处的登记
-        void Register(const std::string& addr);
+        bool Register(const std::string& addr);
 
         // @brief 停止运行
         void Stop();

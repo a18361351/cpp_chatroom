@@ -10,6 +10,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/system/error_code.hpp>
+#include <utility>
 
 #include "server/io_context_pool.hpp"
 #include "server/msg_handler.hpp"
@@ -25,11 +26,13 @@ namespace chatroom::backend {
     public:
         // explicit ServerClass(boost::asio::io_context& listener_ctx) : context_(listener_ctx), acc_(listener_ctx) {}
         ServerClass(uint32_t server_id, 
+                    string server_addr,
                     boost::asio::io_context& listener_ctx, 
                     const std::string& status_rpc_addr,
                     const sw::redis::ConnectionOptions& redis_conn_opts,
                     const sw::redis::ConnectionPoolOptions& redis_pool_opts) : 
             server_id_(server_id)
+            , server_addr_(std::move(server_addr))
             , ctx_(listener_ctx)
             , acc_(listener_ctx)
             , redis_(std::make_shared<RedisMgr>())
@@ -51,6 +54,8 @@ namespace chatroom::backend {
             acc_.bind(ep);  // 
             acc_.listen();  // default backlog
 
+            reporter_->Register(server_addr_);
+
             AcceptorFn();
         }
     
@@ -70,7 +75,7 @@ namespace chatroom::backend {
         }
     private:
     
-    
+        std::string server_addr_;   // 使得外部主机能够连接到本服务器的地址
         uint32_t server_id_;
         boost::asio::io_context& ctx_;
         boost::asio::ip::tcp::acceptor acc_;

@@ -31,7 +31,7 @@ void chatroom::gateway::RedisMgr::RegisterUserToken(std::string_view token, std:
     GetRedis().setex(key, ttl, user_id);
 }
 
-std::pair<bool, std::optional<std::string>> chatroom::gateway::RedisMgr::UserLoginAttempt(std::string_view user_id) {
+std::pair<bool, std::optional<std::string>> chatroom::gateway::RedisMgr::UserLoginAttempt(std::string_view user_id, std::string_view user_name) {
     // TODO(user): 写成脚本最好
     std::string key("status:"); key += user_id;
     // 检查用户是否以及登录？
@@ -41,9 +41,10 @@ std::pair<bool, std::optional<std::string>> chatroom::gateway::RedisMgr::UserLog
         return {false, ret};
     } // else
     // 否则，在Redis中更新用户状态
-    static std::unordered_map<string, string> user_data = {{"server_id", "unset"}, {"status", "unset"}, {"user_id", "unset"}, {"last_login", "unset"}};
+    static std::unordered_map<string, string> user_data = {{"server_id", "unset"}, {"status", "unset"}, {"user_id", "unset"}, {"last_login", "unset"}, {"user_name", "unset"}};
     user_data["status"] = "verifyed";
     user_data["user_id"] = user_id;
+    user_data["user_name"] = user_name;
     user_data["last_login"] = std::to_string(GetTimestamp());
     long long field_set = GetRedis().hsetex(key, user_data.begin(), user_data.end(), std::chrono::milliseconds(60000));
     if (field_set != 1) {
