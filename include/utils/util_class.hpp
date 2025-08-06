@@ -36,7 +36,6 @@ public:
 // };
 
 // void sth(){
-
 //     auto &inst = Singleton<MyType>::GetInstance();
 // }
 

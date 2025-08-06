@@ -12,16 +12,11 @@
 #include <vector>
 #include <unordered_map>
 
+#include "utils/util_func.hpp"
 #include "utils/util_class.hpp"
 
 namespace chatroom::status {
     constexpr uint32_t SERVER_TIMEOUT = 40 * 1000;  // 40s不更新的服务器视为停机
-
-    inline uint64_t get_timestamp_ms() {
-        timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return static_cast<uint64_t>(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000;
-    }
     
     struct ServerInfo {
         ServerInfo(uint32_t field_id, std::string field_addr, uint32_t field_load)
