@@ -13,6 +13,7 @@
 #include "log/log_manager.hpp"
 #include "http/dbm/gateway_dbm.hpp"
 #include "http/redis/gateway_redis.hpp"
+#include "utils/snowflake_id.hpp"
 
 namespace chatroom::gateway {
     // req_handler: 内部维护一个队列/线程池，将接收到的请求分发给下层 
@@ -21,10 +22,11 @@ namespace chatroom::gateway {
     
     class ReqHandler : public std::enable_shared_from_this<ReqHandler> {
         public:
-        explicit ReqHandler(std::shared_ptr<DBM> dbm, std::shared_ptr<RedisMgr> redis, std::shared_ptr<StatusRPCClient> rpc, uint pool_size = 4) : 
+        explicit ReqHandler(std::shared_ptr<DBM> dbm, std::shared_ptr<RedisMgr> redis, std::shared_ptr<StatusRPCClient> rpc, uint pool_size = 4, uint16_t worker_id = 0) : 
             dbm_(std::move(dbm)),
             redis_(std::move(redis)),
             rpc_(std::move(rpc)),
+            uid_gen_(worker_id, 1577836800000),
             pool_(pool_size) {}
     
         ~ReqHandler() {
@@ -44,12 +46,15 @@ namespace chatroom::gateway {
         }
         
         private:
-        // 将dbm和redis类注入ReqHandler
+        // 将dbm和redis类以及rpc客户端注入ReqHandler
         // mysql connection manager
         std::shared_ptr<DBM> dbm_;
         std::shared_ptr<RedisMgr> redis_;
         std::shared_ptr<StatusRPCClient> rpc_;
         
+        // 雪花uid生成器
+        chatroom::UIDGenerator uid_gen_;
+
         // 异步接受请求对象，需要使用线程池
         boost::asio::thread_pool pool_;
         

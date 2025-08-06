@@ -16,6 +16,7 @@ enum {
     GATEWAY_USER_NOT_EXIST = -1, 
     GATEWAY_VERIFY_FAILED = -2, 
     GATEWAY_REG_ALREADY_EXIST = -3,
+    GATEWAY_REG_UID_ALREADY_EXIST = -4,
     GATEWAY_UNKNOWN_ERROR = -100,
     GATEWAY_CONNECTION_ERROR = -101,
     GATEWAY_MYSQL_SERVER_ERROR = -102,
@@ -67,18 +68,21 @@ struct DBConn {
         return true;
     }
 
+    // DBConn业务代码
     // TODO(user): 未来将业务和连接分离
     // @brief 验证用户的用户名和密码是否能与数据库中的对应上
     // @param username 用户名
     // @param passcode 密码，这里传入的密码是明文的，函数内部会自动负责加盐加密并比对
+    // @param uid 对应用户的UID，如果验证成功，函数会设置其为登录用户所对应的UID
     // @return 0(GATEWAY_SUCCESS)成功，否则出错
-    int VerifyUserInfo(std::string_view username, std::string_view passcode);
+    int VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid);
 
     // @brief 尝试着将新用户添加到数据库中
-    // @param username 用户名
+    // @param username 用户名，不可重复
     // @param passcode 密码，这里传入的密码是明文的，存入数据库字段的数据会自动加盐加密
+    // @param uid 用户所对应的UID，不可重复
     // @return 0(GATEWAY_SUCCESS)成功，否则出错
-    int RegisterNew(std::string_view username, std::string_view passcode);
+    int RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid);
 };
 
 

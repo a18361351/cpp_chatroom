@@ -43,11 +43,10 @@ void DBConn::ReconnectImpl(boost::mysql::error_code& err, std::string_view usern
     spdlog::debug("InitStmt");
     // InitStmt
     // 初始化服务器端的语句
-    // FIXME(user): 混用了异常和err，很难看，但是懒得修了
     try {
-        login_check_stmt = conn.prepare_statement("SELECT (passcode) FROM tbl_user WHERE username = ?");
+        login_check_stmt = conn.prepare_statement("SELECT uid, passcode FROM tbl_user WHERE username = ?");
         exist_check_stmt = conn.prepare_statement("SELECT COUNT(*) FROM tbl_user WHERE username = ?");
-        register_stmt = conn.prepare_statement("INSERT INTO tbl_user (username, passcode) VALUES (?, ?)");
+        register_stmt = conn.prepare_statement("INSERT INTO tbl_user (uid, username, passcode) VALUES (?, ?, ?)");
     } catch (const boost::mysql::error_code& ec) {
         // 关闭连接防止连接泄漏
         spdlog::error("Failed to prepare statements in DBConn: {}", ec.message());
@@ -60,13 +59,7 @@ void DBConn::ReconnectImpl(boost::mysql::error_code& err, std::string_view usern
 
 }
 
-// DBConn业务代码
-// TODO(user): 未来将业务和连接分离
-// @brief 验证用户的用户名和密码是否能与数据库中的对应上
-// @param username 用户名
-// @param passcode 密码，这里传入的密码是明文的，函数内部会自动负责加盐加密并比对
-// @return 0(GATEWAY_SUCCESS)成功，否则出错
-int DBConn::VerifyUserInfo(std::string_view username, std::string_view passcode) {
+int DBConn::VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid) {
     // we use string_view in C++17!
     boost::mysql::results ret;
     // TODO(user): 完善报错逻辑
@@ -79,21 +72,25 @@ int DBConn::VerifyUserInfo(std::string_view username, std::string_view passcode)
         return GATEWAY_MYSQL_SERVER_ERROR; // internal error
     }
     if (ret.rows().empty()) {
-        // TODO(user): 这里是否需要进行一个故意的空Verify过程，以进一步降低恶意客户端暴力遍历获取有效用户名的可能性？
         // user not found
         return GATEWAY_USER_NOT_EXIST; // user not found
     }
-    auto correct_code_hash = ret.rows().at(0).at(0).get_string();
+    auto correct_code_hash = ret.rows().at(0).at(1).get_string();
+    auto get_uid = ret.rows().at(0).at(0).get_uint64();
     // is user provided passcode matched with passcode in db?
     bool match = Security::Verify(passcode, correct_code_hash);
-    return match ? GATEWAY_SUCCESS : GATEWAY_VERIFY_FAILED; // 0 = success, -2 = verify failed
+    if (match) {
+        uid = get_uid;
+        return GATEWAY_SUCCESS;
+    }
+    return GATEWAY_VERIFY_FAILED; // 0 = success, -2 = verify failed
 }
 
 // @brief 尝试着将新用户添加到数据库中
 // @param username 用户名
 // @param passcode 密码，这里传入的密码是明文的，存入数据库字段的数据会自动加盐加密
 // @return 0(GATEWAY_SUCCESS)成功，否则出错
-int DBConn::RegisterNew(std::string_view username, std::string_view passcode) {
+int DBConn::RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid) {
     // check if name exists
     boost::mysql::results ret;
     boost::mysql::error_code err;
@@ -110,7 +107,7 @@ int DBConn::RegisterNew(std::string_view username, std::string_view passcode) {
 
     // create new user
     std::string code_hash = Security::HashPassword(passcode);
-    conn.execute_statement(register_stmt, std::tuple(username, code_hash), ret, err, diag);
+    conn.execute_statement(register_stmt, std::tuple(uid, username, code_hash), ret, err, diag);
     if (err) {
         // error when executing SQL
         spdlog::error("Mysql error in register(register_stmt): {} {}", err.what(), diag.server_message());

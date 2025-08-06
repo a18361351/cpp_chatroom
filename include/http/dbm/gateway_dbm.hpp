@@ -54,8 +54,8 @@ class DBM : public Noncopyable {
     bool Stop();
 
     // Convenient intf
-    int VerifyUserInfo(std::string_view username, std::string_view passcode);
-    int RegisterNew(std::string_view username, std::string_view passcode);
+    int VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid);
+    int RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid);
 
     // Expose connection obj to user
     ConnWrapper GetIdleConnWrapper();

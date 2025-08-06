@@ -6,6 +6,7 @@
 #include <json/value.h>
 #include <jsoncpp/json/writer.h>
 #include <jsoncpp/json/json.h>
+#include <sys/types.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -54,6 +55,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     Json::Reader rr;
     Json::Value readed;
 
+    // 从客户端中发送的JSON请求中读取信息
     bool ret = rr.parse(req.body(), readed, false);
     if (!ret) {
         spdlog::error("Error occured when parsing json");
@@ -68,8 +70,10 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         return bad_request(std::move(req), "Invalid request format");
     }
 
+    // 传入MySQL数据库进行身份验证
     spdlog::info("User {} attempt to login", username);
-    int db_ret = dbm_->VerifyUserInfo(username, passcode);
+    uint64_t uid = 0;
+    int db_ret = dbm_->VerifyUserInfo(username, passcode, uid);
     switch (db_ret) {
         case GATEWAY_SUCCESS:
             // 登录成功
@@ -85,7 +89,8 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
             spdlog::error("Unknown error when user {} login", username);
             return server_error(std::move(req), "Server error");
     }
-    // 通过RPC获取服务器信息
+
+    // 验证成功，通过RPC获取服务器信息
     auto stub = rpc_->GetStatusStub();
     grpc::ClientContext ctx;
     chatroom::status::MinimalLoadServerReq rpc_req;
@@ -106,11 +111,13 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         }
         // 否则，就是用户已登录的情况
         // TODO(user): 实现强制下线功能
+        spdlog::info("User already logined, force kick currently online user {}", username);
+        return forbidden_request(std::move(req), "User already login, we will implement force-login logic later~");
     }
 
     // 生成用户的token
     string token = TokenGenerator();
-    redis_->RegisterUserToken(token, username, 300); // 默认5分钟的token存活时间
+    redis_->RegisterUserToken(token, std::to_string(uid), 300); // 默认5分钟的token存活时间
     
     // 现在，把token以及服务器地址打包，发送给用户
     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -146,11 +153,12 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
         spdlog::error("JSON format doesn't match");
         return bad_request(std::move(req), "Invalid request format");
     }
+    uint64_t uid = uid_gen_.Generate();
     spdlog::info("Attempt to register a new user {}", username);
-    int db_ret = dbm_->RegisterNew(username, passcode);
+    int db_ret = dbm_->RegisterNew(username, passcode, uid);
     switch (db_ret) {
         case GATEWAY_SUCCESS:
-            spdlog::info("User {} register successfully", username);
+            spdlog::info("User {} registered successfully, uid = {}", username, uid);
         case GATEWAY_REG_ALREADY_EXIST:
             spdlog::info("Duplicated register attempt by username {}", username);
             return forbidden_request(std::move(req), "Username already exists");   

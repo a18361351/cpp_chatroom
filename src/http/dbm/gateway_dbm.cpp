@@ -58,22 +58,22 @@ bool DBM::Stop() {
     return false;
 }
 
-int DBM::VerifyUserInfo(std::string_view username, std::string_view passcode) {
+int DBM::VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid) {
     auto conn = GetIdleConn();
     if (!conn) {
         return GATEWAY_UNKNOWN_ERROR;   // 连接失败，或其他错误
     }
-    int ret = conn->VerifyUserInfo(username, passcode);
+    int ret = conn->VerifyUserInfo(username, passcode, uid);
     ReturnIdleConn(std::move(conn));
     return ret;
 }
 
-int DBM::RegisterNew(std::string_view username, std::string_view passcode) {
+int DBM::RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid) {
     auto conn = GetIdleConn();
     if (!conn) {
         return GATEWAY_UNKNOWN_ERROR;   // 连接失败，或其他错误
     }
-    int ret = conn->RegisterNew(username, passcode);
+    int ret = conn->RegisterNew(username, passcode, uid);
     ReturnIdleConn(std::move(conn));
     return ret;
 }
