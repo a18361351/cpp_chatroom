@@ -128,6 +128,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     Json::StreamWriterBuilder writer;
     resp_json["token"] = token;
     resp_json["server_addr"] = addr;
+    resp_json["uid"] = uid;
     resp.body() = Json::writeString(writer, resp_json);
     resp.prepare_payload();
     return resp;

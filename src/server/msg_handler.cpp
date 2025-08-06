@@ -65,7 +65,8 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
     switch (msg_type) {
         case DEBUG:
         {
-            spdlog::debug(std::string(msg->GetContent(), msg->GetContentLen()));
+            // spdlog::debug(std::string(msg->GetContent(), msg->GetContentLen()));
+            spdlog::info("Data received: {}", std::string(msg->GetContent(), msg->GetContentLen()));
         }
         case VERIFY:
         {

@@ -8,23 +8,20 @@
 #include <cstdint>
 
 namespace chatroom {
-
+    enum TagType {
+        DEBUG = 0,      // 用于调试的消息格式，收到后把消息显示在日志上
+        VERIFY,         // JSON格式的身份验证消息
+        VERIFY_DONE,    // 完成验证的消息
+        CHAT_MSG,       // 格式：[uint64_t: 目标id][消息内容]
+        CHAT_MSG_TOCLI,    // 发送给客户端的聊天消息，格式：[uint64_t：发送者id][消息内容]
+        GROUP_CHAT_MSG, // 格式：[uint64_t：目标组的group_id][消息内容]
+        RESERVED
+    };
+    
     const int TAG_LEN = 4;
     const int LENGTH_LEN = 4;
     const int HEAD_LEN = TAG_LEN + LENGTH_LEN;
     const uint32_t MAX_CTX_LEN = 1024 * 1024;   // 消息长度上限，实际应用应该不会发送如此大的消息
-
-    // 消息种类（Tag）
-    enum {
-        UNKNOWN_MSG = 0,
-        TEXT_MSG,
-        HELLO_MSG,
-        ECHO_MSG,
-        PING_MSG,
-        PONG_MSG
-    };
-
-    // TODO(user): MsgNode可能需要分成RecvNode和SendNode？MsgNode同时用在发送和接收上语义有点不明
 
     // 会话层用来存储数据的MsgNode节点类
     // 在其中定义一个TLV协议格式：

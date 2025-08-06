@@ -16,5 +16,8 @@ target_include_directories(chat_client
 target_link_libraries(chat_client
     PRIVATE
         Boost::system
-        # common
+        # Jsoncpp support
+        jsoncpp_lib
+        # spdlog
+        spdlog::spdlog
 )

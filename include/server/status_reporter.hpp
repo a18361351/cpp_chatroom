@@ -17,6 +17,8 @@
 #include "server/rpc/status_rpc_client.hpp"
 #include "server/session_manager.hpp"
 
+// FIXME: 当ReportLoad以Couldn't found server错误返回时，应该重新注册
+
 namespace chatroom::backend {
     class StatusReportRPCImpl {
         private:
