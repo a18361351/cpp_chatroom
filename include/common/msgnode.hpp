@@ -146,7 +146,6 @@ namespace chatroom {
         }
         [[deprecated("You are copying a MsgNode object which usually shouldn't be copied.")]]
         MsgNode(const MsgNode& rhs) {
-            printf("WARNING: MsgNode's copy ctor called!\n");
             data_ = new char[rhs.max_len_];
             
             memcpy(data_, rhs.data_,rhs.max_len_);

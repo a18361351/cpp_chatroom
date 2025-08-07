@@ -42,7 +42,7 @@ void chatroom::gateway::HTTPServer::acceptor() {
     auto cb = [sess, self = shared_from_this()](const boost::system::error_code& err) {
         if (err) {
             // tell that error!
-            fprintf(stderr, "HTTP acceptor received an error: %s\n", err.message().c_str());
+            spdlog::error("HTTP acceptor received an error: {}", err.message());
             return;
         }
         sess->start();
@@ -67,7 +67,7 @@ void chatroom::gateway::HTTPConnection::read_request() {
                 self->close();
             } else {
                 // error!
-                fprintf(stderr, "HTTP read error: %s\n", err.message().c_str());
+                spdlog::error("HTTP read error: {}", err.message());
                 self->close();
             }
             return;
@@ -95,7 +95,7 @@ void chatroom::gateway::HTTPConnection::read_request() {
 void chatroom::gateway::HTTPConnection::send_response(boost::beast::http::message_generator&& msg) {
     auto cb = [self = shared_from_this()](boost::beast::error_code err, std::size_t bytes) {
         if (err) {
-            fprintf(stderr, "HTTP write error: %s\n", err.message().c_str());
+            spdlog::error("HTTP write error: {}", err.message());
             self->close();
             return;
         }

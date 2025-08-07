@@ -67,6 +67,7 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
         {
             // spdlog::debug(std::string(msg->GetContent(), msg->GetContentLen()));
             spdlog::info("Data received: {}", std::string(msg->GetContent(), msg->GetContentLen()));
+            break;
         }
         case VERIFY:
         {
@@ -106,6 +107,7 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             }
             // 否则验证成功
             sess->SetVerified(uid);
+            sess_mgr_->AddSession(uid, sess);
             sess->Send("Welcome to the chatroom!", VERIFY_DONE);
         }
         break;

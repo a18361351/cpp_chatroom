@@ -111,6 +111,8 @@ namespace chatroom::backend {
             return verified_;
         }
         
+        // @brief 设定一个Session为已验证状态
+        // @warning 该方法不负责修改SessionManager中对应Session的状态，需要调用者手动设置
         void SetVerified(UID user_id) {
             if (!verified_) {
                 user_id_ = user_id;

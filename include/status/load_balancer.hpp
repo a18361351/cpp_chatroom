@@ -187,10 +187,13 @@ namespace chatroom::status {
     void MinHeapImpl<T, greater_comp>::AnyRemove(uint32_t by_id) {
         auto it = idx_.find(by_id);
         if (it == idx_.end()) throw std::runtime_error("Element not found");
+        if (vec_.empty()) throw std::runtime_error("MinHeap is empty"); // 问题可能更严重，因为idx_和vec_对不上了
         std::size_t idx = it->second;
         idx_.erase(it);
         vec_[idx] = vec_.back();
-        idx_[vec_.back()->GetID()] = idx; // 更新idx
+        if (vec_.size() > 1) {
+            idx_[vec_.back()->GetID()] = idx; // 更新idx
+        }
         vec_.pop_back();
         if (idx < vec_.size()) {
             // 末尾的元素被提到中间，必须尝试上浮或下沉

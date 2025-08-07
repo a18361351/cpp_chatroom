@@ -25,8 +25,6 @@ using namespace chatroom;
 namespace beast = boost::beast;
 namespace http = beast::http;
 
-// FIXME: 客户端发送的代码有点问题，同时客户端无法感知连接的关闭
-
 // Synced
 // 其登录和注册接口是同步的
 class GatewayHelper {
@@ -166,8 +164,11 @@ public:
         auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
             if (err) {
                 // tell that error!
+                spdlog::error("Error when receiving head: {}", err.message());
+                self->Close();  // 由于连接错误，我们需要关闭连接
                 return;
             }
+            spdlog::debug("Received {} bytes of head", bytes_rcvd);
             // cur_pos更新
             self->recv_buf_.cur_pos_ += bytes_rcvd;
             if (self->recv_buf_.cur_pos_ >= HEAD_LEN) {
@@ -200,12 +201,11 @@ public:
         auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
             if (err) {
                 // tell that error!
-                fprintf(stdout, "Receiver() received an error! %s\n", err.what().c_str());
-                fflush(stdout);
+                spdlog::error("Error when receiving content: {}", err.message());
+                self->Close();
                 return;
             }
-            fprintf(stdout, "Receiver() received %zu bytes\n", bytes_rcvd);
-            fflush(stdout);
+            spdlog::debug("Received {} bytes of content", bytes_rcvd);
             // cur_pos更新
             self->recv_buf_.cur_pos_ += bytes_rcvd;
 
@@ -242,16 +242,20 @@ public:
     }
 
     void Close() {
-        sock_.close();
+        if (running_.exchange(false)) {
+            sock_.close();
+            cv_.notify_all();   // 让worker线程能够退出
+        }
     }
 
     void WorkerFn() {
         while (running_) {
             unique_lock lock(mtx_);
-            if (send_q_.empty()) {
+            while (running_ && send_q_.empty()) {
                 cv_.wait(lock);
                 continue;
             }
+            if (!running_) break;
             auto msg = send_q_.front();
             send_q_.pop_front();
             lock.unlock();
@@ -261,11 +265,13 @@ public:
                 [self = shared_from_this()](const errcode& err, std::size_t bytes_sent) {
                     if (err) {
                         spdlog::error("Error when sending message: {}", err.message());
+                        self->Close();
                         return;
                     }
                     spdlog::debug("Sent {} bytes", bytes_sent);
                 });
         }
+        spdlog::info("Worker thread exited");
     }
 
     void Verify(uint64_t uid, const string& token) {
@@ -282,6 +288,9 @@ public:
 
     void WorkerJoin() {
         worker_.join();
+    }
+    bool Running() const {
+        return running_;
     }
 
     MsgNode recv_buf_{1024};
@@ -374,6 +383,10 @@ int main() {
     std::string inp;
     while (true) {
         cin >> inp;
+        if (!sess->Running()) {
+            cout << "Connection closed\n";
+            break;
+        }
         if (inp == "exit") break;
         std::string buf;
         sess->Send(inp.c_str(), inp.size(), DEBUG);
