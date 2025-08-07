@@ -39,7 +39,7 @@ namespace chatroom::backend {
             , sess_mgr_(std::make_shared<SessionManager>())
             , handler_(std::make_shared<MsgHandler>(sess_mgr_, redis_))
             , rpc_cli_(std::make_shared<StatusRPCClient>(status_rpc_addr))
-            , reporter_(std::make_shared<StatusReporter>(server_id, rpc_cli_, sess_mgr_)) 
+            , reporter_(std::make_shared<StatusReporter>(server_addr_, server_id, rpc_cli_, sess_mgr_)) 
         {
             // redis manager connect
             redis_->ConnectTo(redis_conn_opts, redis_pool_opts);
@@ -54,7 +54,7 @@ namespace chatroom::backend {
             acc_.bind(ep);  // 
             acc_.listen();  // default backlog
 
-            reporter_->Register(server_addr_);
+            reporter_->Register();
 
             AcceptorFn();
         }

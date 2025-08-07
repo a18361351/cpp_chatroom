@@ -45,8 +45,8 @@ namespace chatroom::backend {
             ResetTimer();
         });
     }
-    bool StatusReporter::Register(const std::string& addr) {
-        auto ret = rpc_impl_.ReportServerRegister(server_id_, addr, sess_mgr_->GetSessionCount());
+    bool StatusReporter::Register() {
+        auto ret = rpc_impl_.ReportServerRegister(server_id_, server_addr_, sess_mgr_->GetSessionCount());
         if (!ret.ok()) {
             spdlog::error("StatusReporter register rpc call failed: {}", ret.error_message());
         }
@@ -70,7 +70,15 @@ namespace chatroom::backend {
         spdlog::info("Reporting load: {} sessions, {} temporary sessions", sess_count, tmps_count);
         auto ret = rpc_impl_.ReportLoad(server_id_, sess_count + tmps_count);
         if (!ret.ok()) {
-            spdlog::error("StatusReporter report rpc call failed: {}", ret.error_message());
+            if (ret.error_code() == grpc::StatusCode::NOT_FOUND) {
+                // server with that id not found
+                auto ret2 = rpc_impl_.ReportServerRegister(server_id_, server_addr_, sess_count + tmps_count);
+                if (!ret2.ok()) {
+                    spdlog::error("StatusReporter re-register rpc call failed: {}", ret2.error_message());
+                }
+            } else {
+                spdlog::error("StatusReporter report rpc call failed: {}", ret.error_message());
+            }
         }
     }
     void StatusReporter::StartTimer() {

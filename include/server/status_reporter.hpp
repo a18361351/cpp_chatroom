@@ -17,8 +17,6 @@
 #include "server/rpc/status_rpc_client.hpp"
 #include "server/session_manager.hpp"
 
-// FIXME: 当ReportLoad以Couldn't found server错误返回时，应该重新注册
-
 namespace chatroom::backend {
     class StatusReportRPCImpl {
         private:
@@ -36,8 +34,9 @@ namespace chatroom::backend {
 
     class StatusReporter {
         public:
-        StatusReporter(uint32_t server_id, std::shared_ptr<StatusRPCClient> rpc_cli, std::shared_ptr<SessionManager> sess_mgr, uint32_t interval_sec = 15) : 
-        interval_sec_(interval_sec)
+        StatusReporter(std::string addr, uint32_t server_id, std::shared_ptr<StatusRPCClient> rpc_cli, std::shared_ptr<SessionManager> sess_mgr, uint32_t interval_sec = 15) : 
+        server_addr_(std::move(addr))
+        , interval_sec_(interval_sec)
         , server_id_(server_id)
         , work_guard_(boost::asio::make_work_guard(ctx))
         , timer_(ctx, std::chrono::seconds(interval_sec))
@@ -60,11 +59,12 @@ namespace chatroom::backend {
         void UpdateNow();
 
         // @brief 进行服务器在状态服务处的登记
-        bool Register(const std::string& addr);
+        bool Register();
 
         // @brief 停止运行
         void Stop();
         private:
+        std::string server_addr_;
         uint32_t interval_sec_;
         uint32_t server_id_;
         std::thread worker_;
