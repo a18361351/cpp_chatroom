@@ -15,7 +15,7 @@ add_executable(status_server
 # 包含头文件目录
 target_include_directories(status_server
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/include
         ${CMAKE_SOURCE_DIR}/proto
         # boost
         ${Boost_INCLUDE_DIRS}

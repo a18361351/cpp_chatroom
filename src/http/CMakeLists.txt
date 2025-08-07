@@ -19,7 +19,7 @@ add_executable(http_gate
 # 包含头文件目录
 target_include_directories(http_gate
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/include
         ${CMAKE_SOURCE_DIR}/proto
     PUBLIC
         ${Boost_INCLUDE_DIRS}

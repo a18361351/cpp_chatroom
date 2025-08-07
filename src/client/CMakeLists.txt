@@ -7,7 +7,7 @@ add_executable(chat_client
 # 包含头文件目录
 target_include_directories(chat_client
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/include
     PUBLIC
         ${Boost_INCLUDE_DIRS}
 )
