@@ -3,9 +3,11 @@
 
 #include <cassert>
 #include <cstring>
+#include <cstdint>
 #include <netinet/in.h>
 #include <stdexcept>
-#include <cstdint>
+
+#include "utils/field_op.hpp"
 
 namespace chatroom {
     enum TagType {
@@ -25,7 +27,7 @@ namespace chatroom {
 
     // 会话层用来存储数据的MsgNode节点类
     // 在其中定义一个TLV协议格式：
-    //  | Tag(4字节) | Len(4字节) | Content(Len字节) |
+    //  | Tag(4字节，网络序) | Len(4字节，网络序) | Content(Len字节) |
     class MsgNode {
         public:
         // Ctors
@@ -52,10 +54,12 @@ namespace chatroom {
             assert(TAG_LEN == sizeof(uint32_t));
             assert(LENGTH_LEN == sizeof(uint32_t));
             if (msg_len > 0) {
-                uint32_t net_msg_len = htonl(msg_len);
-                uint32_t net_tag = htonl(tag);
-                memcpy(data_, &net_tag, TAG_LEN);
-                memcpy(data_ + TAG_LEN, &net_msg_len, LENGTH_LEN);
+                // uint32_t net_msg_len = htonl(msg_len);
+                // uint32_t net_tag = htonl(tag);
+                // memcpy(data_, &net_tag, TAG_LEN);
+                // memcpy(data_ + TAG_LEN, &net_msg_len, LENGTH_LEN);
+                WriteNetField32(data_, tag);
+                WriteNetField32(data_ + TAG_LEN, msg_len);
                 memcpy(data_ + TAG_LEN + LENGTH_LEN, content, msg_len);
             } else {
                 throw std::invalid_argument("Attempt to create a zero-sized message");
@@ -175,8 +179,9 @@ namespace chatroom {
         // @param 要设置的字段值，主机字节序
         // @warning 该函数仅设置消息头部中的内容长度字段，以及成员变量！不会对实际缓冲区长度有任何影响！
         void SetContentLenField(uint32_t content_len) {
-            uint32_t net_cont_len = htonl(content_len);
-            memcpy(data_ + TAG_LEN, &net_cont_len, LENGTH_LEN);
+            // uint32_t net_cont_len = htonl(content_len);
+            // memcpy(data_ + TAG_LEN, &net_cont_len, LENGTH_LEN);
+            WriteNetField32(data_ + TAG_LEN, content_len);
             ctx_len_ = content_len;
         }
 
@@ -193,8 +198,9 @@ namespace chatroom {
         // @brief 设置消息头部中的Tag字段
         // @param tag 要设置的tag值，主机字节序
         void SetTagField(uint32_t tag) {
-            uint32_t net_tag = htonl(tag);
-            memcpy(data_ + TAG_LEN, &net_tag, LENGTH_LEN);
+            // uint32_t net_tag = htonl(tag);
+            // memcpy(data_ + TAG_LEN, &net_tag, LENGTH_LEN);
+            WriteNetField32(data_, tag);
         }
 
         char* GetContent() {
