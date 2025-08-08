@@ -24,6 +24,11 @@ namespace chatroom::backend {
         // @ 注：不用担心裸指针问题，该裸指针仅仅作为哈希表的key使用，函数不访问指针指向地址
         // @warning 因此，调用者需要手动关闭会话连接
         bool RemoveTempSession(Session* sess_ptr);
+
+
+        // @brief 移除会话对象
+        // @warning 该方法不会关闭会话本身，只是将其从列表移除；如果需要关闭会话，请调用Session::Close()
+        bool RemoveSession(UID sess_id);
         
         // @brief 获取对应的Session对象
         std::shared_ptr<Session> GetSession(UID sess_id);

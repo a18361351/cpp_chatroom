@@ -7,12 +7,15 @@ namespace chatroom::backend {
         std::unique_lock lock(lck_);
         auto it = sess_.find(sess_id);
         if (it != sess_.end()) {
-            it->second->down_ = true;
-            it->second->sock_.close();
-            sess_.erase(it);
+            it->second->Close();
             return true;
         }
         return false;
+    }
+
+    bool SessionManager::RemoveSession(UID sess_id) {
+        std::unique_lock lock(lck_);
+        return sess_.erase(sess_id) == 1;
     }
     
     bool SessionManager::AddTempSession(std::shared_ptr<Session> sess) {

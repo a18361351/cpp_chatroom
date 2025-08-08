@@ -62,49 +62,23 @@ namespace chatroom::backend {
         // 已建立链接的Sess开始执行
         // 注意Session的生命周期管理由自己以及Server的sessions集合对象管理
         void Start() {
-            Receiver();
+            ReceiveHead();
         }
-    
-        // 该方法在整个消息被读取完整后被调用
-        void ReceiveHandler(uint32_t content_len, uint32_t tag);
-    
-        void Receiver() {
-            if (recv_ptr_->cur_pos_ < HEAD_LEN) {
-                ReceiveHead();
-            } else {
-                ReceiveContent();
-            }
-        }
-    
-        void ReceiveHead();
-    
-        void ReceiveContent();
-    
-        std::shared_ptr<MsgNode> GetRecvNode() {
-            return recv_ptr_;
-        }
-    
+        
         public:
-        using msg_ptr = std::shared_ptr<MsgNode>;
-        using locker = std::unique_lock<std::mutex>;
-    
         // Session对外的发送接口1，函数会将消息放入队列中等待发送
         void Send(const char* content, uint32_t send_len, uint32_t tag);
-    
+        
         // Session对外的发送接口2，函数会将消息放入队列中等待发送
         void Send(const std::string& msg, uint32_t tag) {
             Send(msg.c_str(), msg.size(), tag);
         }
-    
+        
         // Session对外的发送接口3，函数会将已有的消息放入队列中等待发送
         void Send(std::shared_ptr<MsgNode> msg);
-
-        // @brief 关闭会话的连接，所有异步读写都会被中断
-        void Close() {
-            down_ = true;
-            // 异步操作会被中断
-            sock_.close();
-        }
+        
+        // @brief 关闭这个会话；其连接会被中断，同时down标志被设置为true，同时删除对sess_mgr_中对应的会话项
+        void Close();
         
         // 用于客户端验证
         bool IsVerified() const {
@@ -121,9 +95,18 @@ namespace chatroom::backend {
         }
         
         private:
+        // 该方法在整个消息被读取完整后被调用
+        void ReceiveHandler(uint32_t content_len, uint32_t tag);
+    
+        // 启动接收头部的回调
+        void ReceiveHead();
+    
+        // 启动接收内容的回调
+        void ReceiveContent();
+
         // 只要还有数据要发送，QueueSend就会一直被调用
         void QueueSend();
-
+        
         private:
         // 会话成员变量
         // TODO(user): 发送队列可以设置长度限制，以保证不会产生发送速率过快的情况
@@ -134,10 +117,11 @@ namespace chatroom::backend {
         // ***** 接收操作 *****
         std::shared_ptr<MsgNode> recv_ptr_;
         // ***** 发送操作 *****
-        std::deque<msg_ptr> send_q_;    // 发送队列
+        std::deque<std::shared_ptr<MsgNode>> send_q_;    // 发送队列
+        std::shared_ptr<MsgNode> sending_;
         std::mutex send_latch_;         // 队列锁
         // 连接相关
-        bool down_{false};  // 该标志被设为true后，session不会有下一步的动作
+        std::atomic_bool down_{false};  // 该标志被设为true后，session不会有下一步的动作
         boost::asio::ip::tcp::socket sock_;
         boost::asio::strand<boost::asio::io_context::executor_type> strand_;
         // ***** 外部对象管理 *****

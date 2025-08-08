@@ -19,6 +19,20 @@ namespace chatroom {
         GROUP_CHAT_MSG, // 格式：[uint64_t：目标组的group_id][消息内容]
         RESERVED
     };
+
+    // @brief 返回TagType的字符串表示
+    inline std::string_view TagTypeStr(enum TagType e) {
+        switch (e) {
+            case DEBUG: return "DEBUG";
+            case VERIFY: return "VERIFY";
+            case VERIFY_DONE: return "VERIFY_DONE";
+            case CHAT_MSG: return "CHAT_MSG";
+            case CHAT_MSG_TOCLI: return "CHAT_MSG_TOCLI";
+            case GROUP_CHAT_MSG: return "GROUP_CHAT_MSG";
+            case RESERVED: return "RESERVED";
+            default: return "UNKNOWN";
+        }
+    }
     
     const int TAG_LEN = 4;
     const int LENGTH_LEN = 4;
