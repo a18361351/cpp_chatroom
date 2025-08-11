@@ -11,6 +11,7 @@
 #include <thread>
 #include <utility>
 
+#include "common/timer.hpp"
 #include "log/log_manager.hpp"
 #include "protocpp/status.pb.h"
 #include "protocpp/status.grpc.pb.h"
@@ -34,19 +35,18 @@ namespace chatroom::backend {
 
     class StatusReporter {
         public:
-        StatusReporter(std::string addr, uint32_t server_id, std::shared_ptr<StatusRPCClient> rpc_cli, std::shared_ptr<SessionManager> sess_mgr, uint32_t interval_sec = 15) : 
+        StatusReporter(std::string addr, uint32_t server_id, std::shared_ptr<StatusRPCClient> rpc_cli, std::shared_ptr<SessionManager> sess_mgr, TimerTaskManager* timer_mgr, uint32_t interval_sec = 15) : 
         server_addr_(std::move(addr))
         , interval_sec_(interval_sec)
         , server_id_(server_id)
-        , work_guard_(boost::asio::make_work_guard(ctx))
-        , timer_(ctx, std::chrono::seconds(interval_sec))
+        , timer_mgr_(timer_mgr)
         , rpc_impl_(std::move(rpc_cli))
         , sess_mgr_(std::move(sess_mgr))
         {
-            worker_ = std::thread([this] {
-                ctx.run();
-                spdlog::info("StatusReporter worker thread exited");
-            });
+            task_iter_ = timer_mgr_->CreateTimer(std::chrono::milliseconds(interval_sec_ * 1000), [this] {
+                spdlog::info("StatusReporter: Updating status (timed task)");
+                ReportImpl();
+            }, true);
             StartTimer();
         }
         ~StatusReporter() {
@@ -61,16 +61,16 @@ namespace chatroom::backend {
         // @brief 进行服务器在状态服务处的登记
         bool Register();
 
-        // @brief 停止运行
+        // @brief 停止运行，不要重复调用Stop()函数
         void Stop();
         private:
         std::string server_addr_;
         uint32_t interval_sec_;
         uint32_t server_id_;
-        std::thread worker_;
-        boost::asio::io_context ctx;
-        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;
-        boost::asio::steady_timer timer_;
+        
+        TimerTaskManager* timer_mgr_;
+        TimerTaskManager::TaskIter task_iter_;
+
         StatusReportRPCImpl rpc_impl_;
         std::shared_ptr<SessionManager> sess_mgr_;
         std::atomic_bool stopped_{false};

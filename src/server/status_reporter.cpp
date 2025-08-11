@@ -39,11 +39,9 @@ namespace chatroom::backend {
 
     // ***** StatusReporter *****
     void StatusReporter::UpdateNow() {
-        boost::asio::post(ctx, [this] {
-            timer_.cancel();
-            ReportImpl();
-            ResetTimer();
-        });
+        (*task_iter_)->Cancel();
+        ReportImpl();
+        (*task_iter_)->Activate();
     }
     bool StatusReporter::Register() {
         auto ret = rpc_impl_.ReportServerRegister(server_id_, server_addr_, sess_mgr_->GetSessionCount());
@@ -55,12 +53,8 @@ namespace chatroom::backend {
     void StatusReporter::Stop() {
         // stopped_ = true;
         if (stopped_.exchange(true)) return;
-        boost::asio::post(ctx, [this] {
-            timer_.cancel();
-            work_guard_.reset();
-        });
-        ctx.stop();
-        worker_.join();
+        (*task_iter_)->Cancel();
+        timer_mgr_->RemoveTimer(task_iter_);
     }
 
     
@@ -82,15 +76,11 @@ namespace chatroom::backend {
         }
     }
     void StatusReporter::StartTimer() {
-        timer_.async_wait([this](const boost::system::error_code &ec) {
-            if (ec) return;
-            ReportImpl();
-            ResetTimer();
-        });
+        (*task_iter_)->Activate();
     }
     void StatusReporter::ResetTimer() {
-        timer_.expires_after(std::chrono::seconds(interval_sec_));
-        StartTimer();
+        (*task_iter_)->Cancel();
+        (*task_iter_)->Activate();
     }
 }
 
