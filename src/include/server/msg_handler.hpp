@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "common/msgnode.hpp"
+#include "server/online_status_upload.hpp"
 #include "server/redis/server_redis.hpp"
 #include "server/session_manager.hpp"
 #include "utils/util_class.hpp"
@@ -30,7 +31,10 @@ namespace chatroom::backend {
 
     class MsgHandler {
         public:
-        MsgHandler(std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis) : sess_mgr_(std::move(sess_mgr)), redis_(std::move(redis)) {}
+        MsgHandler(std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis, std::shared_ptr<OnlineStatusUploader> status_uploader) : 
+            sess_mgr_(std::move(sess_mgr)) 
+            , redis_(std::move(redis))
+            , status_uploader_(std::move(status_uploader)) {}
 
         // @brief 异步向处理队列投递一个消息，并进行处理
         bool PostMessage(CbSessType sess, RcvdMsgType msg);
@@ -49,6 +53,7 @@ namespace chatroom::backend {
         std::queue<std::pair<CbSessType, RcvdMsgType>> q_;
         std::shared_ptr<SessionManager> sess_mgr_;  // SessionManager本身保证线程安全
         std::shared_ptr<RedisMgr> redis_;   // backend的redis管理器
+        std::shared_ptr<OnlineStatusUploader> status_uploader_; // 更新用户在线状态的对象
         bool running_{false};
     };
 }

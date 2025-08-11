@@ -1,3 +1,6 @@
+#ifndef COMMON_TIMER_HEADER
+#define COMMON_TIMER_HEADER
+
 #include <atomic>
 #include <chrono>
 #include <list>
@@ -61,3 +64,5 @@ namespace chatroom {
         std::mutex lck_;
     };
 }
+
+#endif

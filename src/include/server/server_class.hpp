@@ -14,6 +14,7 @@
 
 #include "server/io_context_pool.hpp"
 #include "server/msg_handler.hpp"
+#include "server/online_status_upload.hpp"
 #include "server/redis/server_redis.hpp"
 #include "server/rpc/status_rpc_client.hpp"
 #include "server/session_manager.hpp"
@@ -37,8 +38,9 @@ namespace chatroom::backend {
             , acc_(listener_ctx)
             , timer_mgr_(std::make_unique<TimerTaskManager>())
             , redis_(std::make_shared<RedisMgr>())
+            , status_uploader_(std::make_shared<OnlineStatusUploader>(redis_, timer_mgr_.get()))
             , sess_mgr_(std::make_shared<SessionManager>())
-            , handler_(std::make_shared<MsgHandler>(sess_mgr_, redis_))
+            , handler_(std::make_shared<MsgHandler>(sess_mgr_, redis_, status_uploader_))
             , rpc_cli_(std::make_shared<StatusRPCClient>(status_rpc_addr))
             , reporter_(std::make_shared<StatusReporter>(server_addr_, server_id, rpc_cli_, sess_mgr_, timer_mgr_.get())) 
         {
@@ -72,21 +74,27 @@ namespace chatroom::backend {
         Singleton<IOThreadPool>::GetInstance().Stop();
     #endif
             reporter_->Stop();
+            reporter_.reset();
             handler_->Stop();
+            handler_.reset();
+
+            // 使用timer的类需要在timer_mgr_析构之前析构
+            status_uploader_.reset();
 
             // timer worker stop
             timer_mgr_.reset();
         }
     private:
     
-        std::string server_addr_;   // 使得外部主机能够连接到本服务器的地址（IP:Port）
         uint32_t server_id_;
+        std::string server_addr_;   // 使得外部主机能够连接到本服务器的地址（IP:Port）
         boost::asio::io_context& ctx_;
         boost::asio::ip::tcp::acceptor acc_;
         // 外部封装类
         // timer_mgr_类被StatusReporter类使用
         std::unique_ptr<TimerTaskManager> timer_mgr_;
         std::shared_ptr<RedisMgr> redis_;
+        std::shared_ptr<OnlineStatusUploader> status_uploader_;
         std::shared_ptr<SessionManager> sess_mgr_;
         std::shared_ptr<MsgHandler> handler_;
         std::shared_ptr<StatusRPCClient> rpc_cli_;

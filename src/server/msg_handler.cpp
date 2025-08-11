@@ -62,6 +62,7 @@ void chatroom::backend::MsgHandler::Worker() {
 // 消息处理逻辑
 void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& msg) {
     uint32_t msg_type = msg->GetTagField();
+    status_uploader_->AddSession(sess->GetUserId());    // 收到了用户发送的消息，表明其还在线
     switch (msg_type) {
         case DEBUG:
         {

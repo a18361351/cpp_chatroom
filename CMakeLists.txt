@@ -101,7 +101,7 @@ if(CPPCHECK_EXE)
                 --inconclusive
                 --std=c++20
                 --quiet
-                -I ${CMAKE_SOURCE_DIR}/include
+                -I ${CMAKE_SOURCE_DIR}/src/include
                 ${CMAKE_SOURCE_DIR}/src
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Running cppcheck analysis..."
