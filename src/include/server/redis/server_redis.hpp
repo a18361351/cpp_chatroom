@@ -22,17 +22,21 @@ namespace chatroom::backend {
 
         std::optional<uint64_t> VerifyUser(std::string_view token);
         
-        bool UploadUserStatus(std::string_view user_id, std::string_view server_id) {
-            std::string key("status:"); key += user_id;
-            std::unordered_map<string_view, string_view> data;
-            data["server_id"] = server_id;
-            data["status"] = "online";
-            data["user_id"];    // 刷新TTL
-            data["user_name"];  // 刷新TTL
-            data["last_login"]; // 刷新TTL
-            long long field_set = GetRedis().hsetex(key, data.begin(), data.end(), std::chrono::milliseconds(60000));
-            return field_set == 1;
-        }
+        std::optional<std::string> GetUserLocation(uint64_t uid);
+
+        std::string SendToMsgQueue(std::string_view server_id, uint64_t from, uint64_t to, std::string_view content, int max_count = 1000);
+
+        bool UpdateUserStatus(std::string_view server_id, uint64_t uid);
+
+        using Attrs = std::unordered_map<std::string, std::string>;
+        using Item = std::pair<std::string, std::optional<Attrs>>;
+        using ItemStream = std::vector<Item>;
+        
+        // @brief 从消息队列中接收消息，接收即确认
+        void RecvFromMsgQueueNoACK(std::string_view server_id, std::string_view consumer_id, std::unordered_map<std::string, ItemStream>& out, uint block_ms = 2000, uint recv_count = 10);
+
+        void RegisterMsgQueue(std::string_view server_id, bool read_from_begin);
+
         private:
         std::unique_ptr<sw::redis::Pipeline> pl_;
     };

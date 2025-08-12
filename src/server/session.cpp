@@ -3,11 +3,11 @@
 
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/asio/read.hpp>
 
 #include "log/log_manager.hpp"
 #include "server/msg_handler.hpp"
 #include "server/session.hpp"
-#include "server/server_class.hpp"
 
 using namespace boost::asio;
 
@@ -32,7 +32,7 @@ namespace chatroom::backend {
     }
     
     // Send3
-    void Session::Send(shared_ptr<MsgNode> ptr) {
+    void Session::Send(std::shared_ptr<MsgNode> ptr) {
         // 如果队列原本是空的，表示当前没有正在执行的发送
         // 那么我们就执行QueueSend函数以启动异步发送程序
         // 对队列的操作通过send_latch保护
@@ -59,7 +59,7 @@ namespace chatroom::backend {
         }
     
         // 发送操作完成后的回调函数
-        auto cb = [self = shared_from_this()](const errcode& err, size_t bytes_sent) {
+        auto cb = [self = shared_from_this()](const boost::system::error_code& err, size_t bytes_sent) {
             // callback
             if (err) {
                 // tell that error!
@@ -87,11 +87,11 @@ namespace chatroom::backend {
             return; // 异步过程中，handler对象已经被销毁了
         }
         handler->PostMessage(shared_from_this(), std::move(this->recv_ptr_));
-        this->recv_ptr_ = make_shared<MsgNode>(INITIAL_NODE_SIZE);  // 发送完数据之后创建新节点
+        this->recv_ptr_ = std::make_shared<MsgNode>(INITIAL_NODE_SIZE);  // 发送完数据之后创建新节点
     }
     
     void Session::ReceiveHead() {
-        auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
+        auto cb = [self = shared_from_this()](const boost::system::error_code& err, std::size_t bytes_rcvd) {
             if (err) {
                 if (err == boost::asio::error::eof) {
                     spdlog::debug("Remote host closed connection");
@@ -135,7 +135,7 @@ namespace chatroom::backend {
                                 boost::asio::bind_executor(strand_, cb));
     }
     void Session::ReceiveContent() {
-        auto cb = [self = shared_from_this()](const errcode& err, std::size_t bytes_rcvd) {
+        auto cb = [self = shared_from_this()](const boost::system::error_code& err, std::size_t bytes_rcvd) {
             if (err) {
                 if (err == boost::asio::error::eof) {
                     spdlog::debug("Remote host closed connection");

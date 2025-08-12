@@ -14,7 +14,8 @@ namespace chatroom {
         private:
         // sw::redis::Redis是个RAII的对象且线程安全的对象，构造时自动连接，析构时自动释放
         std::unique_ptr<sw::redis::Redis> redis_;
-        protected:
+        public:
+        // @brief 获取一个Redis对象
         sw::redis::Redis& GetRedis() {
             if (!redis_) {
                 throw std::runtime_error("Redis connection not initialized");

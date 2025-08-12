@@ -13,6 +13,7 @@
 #include <sw/redis++/connection_pool.h>
 
 #include "server/io_context_pool.hpp"
+#include "server/mq_handler.hpp"
 #include "server/msg_handler.hpp"
 #include "server/online_status_upload.hpp"
 #include "server/redis/server_redis.hpp"
@@ -40,15 +41,18 @@ namespace chatroom::backend {
             , redis_(std::make_shared<RedisMgr>())
             , status_uploader_(std::make_shared<OnlineStatusUploader>(redis_, timer_mgr_.get()))
             , sess_mgr_(std::make_shared<SessionManager>())
-            , handler_(std::make_shared<MsgHandler>(sess_mgr_, redis_, status_uploader_))
+            , handler_(std::make_shared<MsgHandler>(server_id_, sess_mgr_, redis_, status_uploader_))
             , rpc_cli_(std::make_shared<StatusRPCClient>(status_rpc_addr))
-            , reporter_(std::make_shared<StatusReporter>(server_addr_, server_id, rpc_cli_, sess_mgr_, timer_mgr_.get())) 
+            , reporter_(std::make_shared<StatusReporter>(server_addr_, server_id_, rpc_cli_, sess_mgr_, timer_mgr_.get()))
+            , mq_handler_()
         {
             // redis manager connect
             redis_->ConnectTo(redis_conn_opts, redis_pool_opts);
 
             // handler start
             handler_->Start();
+
+            mq_handler_ = std::make_shared<MQHandler>(server_id_, sess_mgr_, redis_);
 
         }
 
@@ -73,6 +77,8 @@ namespace chatroom::backend {
     #elif defined(USING_IOTHREAD_POOL)
         Singleton<IOThreadPool>::GetInstance().Stop();
     #endif
+            mq_handler_.reset();
+
             reporter_->Stop();
             reporter_.reset();
             handler_->Stop();
@@ -99,6 +105,7 @@ namespace chatroom::backend {
         std::shared_ptr<MsgHandler> handler_;
         std::shared_ptr<StatusRPCClient> rpc_cli_;
         std::shared_ptr<StatusReporter> reporter_;
+        std::shared_ptr<MQHandler> mq_handler_;
         
     };
 

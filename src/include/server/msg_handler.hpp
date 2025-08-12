@@ -31,8 +31,9 @@ namespace chatroom::backend {
 
     class MsgHandler {
         public:
-        MsgHandler(std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis, std::shared_ptr<OnlineStatusUploader> status_uploader) : 
-            sess_mgr_(std::move(sess_mgr)) 
+        MsgHandler(uint32_t server_id, std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis, std::shared_ptr<OnlineStatusUploader> status_uploader) : 
+            server_id_(std::to_string(server_id))
+            , sess_mgr_(std::move(sess_mgr)) 
             , redis_(std::move(redis))
             , status_uploader_(std::move(status_uploader)) {}
 
@@ -47,6 +48,7 @@ namespace chatroom::backend {
         private:
         void Worker();
         void Processor(CbSessType&&, RcvdMsgType&&);
+        std::string server_id_;
         std::mutex lck_;
         std::condition_variable cv_;
         std::thread worker_;

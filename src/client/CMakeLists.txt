@@ -3,6 +3,7 @@
 add_executable(chat_client
     client_main.cpp
     client_class.cpp
+    ${CMAKE_SOURCE_DIR}/src/common/timer.cpp
 )
 
 # 包含头文件目录

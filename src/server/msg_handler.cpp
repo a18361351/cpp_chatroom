@@ -1,4 +1,5 @@
 #include <jsoncpp/json/json.h>
+#include <string_view>
 
 #include "log/log_manager.hpp"
 #include "server/msg_handler.hpp"
@@ -109,6 +110,7 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             // 否则验证成功
             sess->SetVerified(uid);
             sess_mgr_->AddSession(uid, sess);
+            redis_->UpdateUserStatus(server_id_, uid);
             sess->Send("Welcome to the chatroom!", VERIFY_DONE);
         }
         break;
@@ -120,8 +122,17 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             if (!target_sess) {
                 // 用户未在本服务器上登陆，要么其在其他服务器上、要么其不在线、甚至可能是不存在的用户ID，最复杂的场景
                 spdlog::debug("MsgHandler received a non-local user chat");
-                spdlog::debug("TODO: finish the logic!");
-                
+                // 首先根据UID查询用户在线状态（查Redis）
+                auto sid = redis_->GetUserLocation(target_uid);
+                if (sid.has_value()) {
+                    spdlog::debug("Sending message to server {}", sid.value());
+                    // 通过消息队列（Redis Stream）发送给对方服务器
+                    auto ret = redis_->SendToMsgQueue(sid.value(), sess->GetUserId(), target_uid, std::string_view(msg->GetContent() + sizeof(uint64_t), msg->GetContent() + msg->GetContentLen()));
+                    spdlog::debug("Message sent with return value: {}", ret);
+                } else {
+                    // 用户不在线，需要进一步查询（可能需要查MySQL数据库来确定用户是否存在）
+                    spdlog::debug("TODO: Finish the logic for offline user!");
+                }
             } else {
                 spdlog::debug("MsgHandler received a local user chat");
                 // 将消息传给对应用户即可，不需要拷贝
@@ -140,6 +151,11 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             spdlog::debug("GroupChat message received");
             uint64_t target_group;
             return;
+        }
+        break;
+        case PING:
+        {
+            // do nothing
         }
         break;
         default: 

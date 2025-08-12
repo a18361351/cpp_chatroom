@@ -95,6 +95,7 @@ namespace chatroom::client {
         Json::FastWriter fw;
 
         req.body() = fw.write(root);
+        req.prepare_payload();
 
         // 进行发送
         http::write(tcp, req);

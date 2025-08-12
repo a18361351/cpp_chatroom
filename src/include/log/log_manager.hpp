@@ -1,8 +1,6 @@
 #ifndef LOG_MANAGER_HEADER
 #define LOG_MANAGER_HEADER
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
-
 #include <spdlog/spdlog.h>
 
 class LoggerLevelSetter {

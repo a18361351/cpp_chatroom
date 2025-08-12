@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <memory>
+#include <spdlog/common.h>
 #include <string>
 
 #include <boost/beast/core.hpp>
@@ -16,6 +18,7 @@
 
 #include "client/client_class.hpp"
 #include "common/msgnode.hpp"
+#include "common/timer.hpp"
 #include "log/log_manager.hpp"
 #include "utils/field_op.hpp"
 #include "utils/util_class.hpp"
@@ -32,6 +35,8 @@ namespace http = beast::http;
 
 
 int main() {
+    spdlog::set_level(spdlog::level::info);
+
     boost::asio::io_context ctx;
     client::GatewayHelper gate(ctx);
 
@@ -104,6 +109,12 @@ int main() {
         sess->Start(remote);
     });
     sess->Verify(uid, token);
+    // Timer task用来发送心跳包
+    TimerTaskManager tm_mgr;
+    auto task = tm_mgr.CreateTimer(std::chrono::milliseconds(5000), [sess] {
+        sess->Send("PING", 4, PING);   // 心跳包
+    });
+    (*task)->Activate();
     std::array<char, 255> inp;
     size_t end_pos;
     while (true) {
@@ -162,6 +173,8 @@ int main() {
         }
     }
     printf("Closing\n");
+    tm_mgr.RemoveTimer(task);
+
     sess->Close();
     sess->WorkerJoin();
     receiver.join();

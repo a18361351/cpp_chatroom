@@ -7,6 +7,7 @@ add_executable(chat_server
     session_manager.cpp
     status_reporter.cpp
     msg_handler.cpp
+    mq_handler.cpp
     redis/server_redis.cpp
     # io_context_pool.cpp
     # io_thread_pool.cpp

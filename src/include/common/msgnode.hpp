@@ -17,6 +17,7 @@ namespace chatroom {
         CHAT_MSG,       // 格式：[uint64_t: 目标id][消息内容]
         CHAT_MSG_TOCLI,    // 发送给客户端的聊天消息，格式：[uint64_t：发送者id][消息内容]
         GROUP_CHAT_MSG, // 格式：[uint64_t：目标组的group_id][消息内容]
+        PING,           // 心跳包
         RESERVED
     };
 
