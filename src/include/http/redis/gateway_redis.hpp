@@ -26,8 +26,11 @@ namespace chatroom::gateway {
         // @brief 将用户的Token存储到Redis中，以便用户进行登录
         void RegisterUserToken(std::string_view token, std::string_view user_id, long long ttl = 300);
 
-        // @return {bool, string}: 操作是否成功，以及如果用户已经登录的话，其所在的服务器编号
-        std::pair<bool, std::optional<std::string>> UserLoginAttempt(std::string_view user_id, std::string_view user_name);
+        // @return {bool, string}: 操作是否成功，以及如果用户已经登录的话，其所在的服务器编号（正在登陆的情况，会返回"unset"）
+        std::pair<bool, std::optional<std::string>> UserLoginAttempt(std::string_view user_id);
+
+        // @brief 在验证成功后，更新缓存中的用户信息
+        bool UpdateUserInfo(std::string_view user_id, std::string_view user_name);
     };
 }
 

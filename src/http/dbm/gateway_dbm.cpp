@@ -13,7 +13,7 @@ bool DBM::Start(uint conns, uint max_conn) {
             return false;
         }
         for (uint i = 0; i < conns; ++i) {
-            conns_.emplace_back(std::make_shared<DBConn>(dbm_ctx_, mysql_addr_, mysql_port_));
+            conns_.emplace_back(std::make_shared<DBConn>(dbm_ctx_, ssl_ctx_, mysql_addr_, mysql_port_));
             if (!conns_.back()->Connect(username_, password_, db_name_)) {
                 // error when connecting
                 // 当连接池连接出现错误时，我们应该怎么做？不断重新连接？断开其他连接并表示错误？保留现有的连接然后继续下一个？
@@ -78,17 +78,8 @@ int DBM::RegisterNew(std::string_view username, std::string_view passcode, uint6
     return ret;
 }
 
-ConnWrapper DBM::GetIdleConnWrapper() {
-    ConnPtr conn = GetIdleConn();
-    if (!conn) {
-        // no idle connection
-        return {nullptr, this};
-    }
-    return {std::move(conn), this};
-}
-
 ConnPtr DBM::CreateConn() {
-    ConnPtr conn = make_shared<DBConn>(dbm_ctx_, mysql_addr_, mysql_port_);
+    ConnPtr conn = make_shared<DBConn>(dbm_ctx_, ssl_ctx_, mysql_addr_, mysql_port_);
     if (!conn->Connect(username_, password_, db_name_)) {
         // error when connecting
         return nullptr;

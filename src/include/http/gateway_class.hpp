@@ -15,14 +15,19 @@
 #include "http/http_server.hpp"
 #include "http/rpc/status_rpc_client.hpp"
 
-const std::string mysql_addr = "192.168.56.101";
-const int mysql_port = 3306;
-
-const std::string username = "lance";
-const std::string password = "123456";
-const std::string db_name = "chat";
 
 namespace chatroom::gateway {
+    // MySQL服务器配置的类
+    struct DBConfigure {
+        std::string mysql_addr_;
+        uint mysql_port_;
+        std::string username_;
+        std::string password_;
+        std::string db_name_;
+        DBConfigure(std::string_view mysql_addr = "", uint mysql_port = 0, std::string_view username = "", std::string_view password = "", std::string_view db_name = "") :
+            mysql_addr_(mysql_addr), mysql_port_(mysql_port), username_(username), password_(password), db_name_(db_name) {}
+    };
+
     // 网关服务器的一个实例
     class GatewayClass : public Noncopyable /* 或者GatewayApp */ {
         public:
@@ -30,15 +35,21 @@ namespace chatroom::gateway {
         explicit GatewayClass(boost::asio::io_context& http_ctx) :
             http_ctx_(http_ctx) 
         {
-            spdlog::info("GatewayClass created");
+            spdlog::debug("GatewayClass created");
         }
 
-        void Initialize(const boost::asio::ip::tcp::endpoint& http_ep, 
+        void Initialize(const DBConfigure& db_conf, const boost::asio::ip::tcp::endpoint& http_ep, 
                      const sw::redis::ConnectionOptions& redis_conn_opt,
                      const sw::redis::ConnectionPoolOptions& redis_pool_opt,
                      const std::string& status_ep) 
         {
-            dbm_ = std::make_shared<DBM>(username, password, db_name, mysql_addr, mysql_port);
+            dbm_ = std::make_shared<DBM>(
+                db_conf.username_, 
+                db_conf.password_, 
+                db_conf.db_name_,
+                db_conf.mysql_addr_, 
+                db_conf.mysql_port_ 
+            );
             redis_mgr_ = std::make_shared<RedisMgr>();
             redis_mgr_->ConnectTo(redis_conn_opt, redis_pool_opt);
             status_rpc_ = std::make_shared<StatusRPCClient>(status_ep);

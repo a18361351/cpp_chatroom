@@ -49,7 +49,6 @@ void DBConn::ReconnectImpl(boost::mysql::error_code& err, std::string_view usern
         register_stmt = conn.prepare_statement("INSERT INTO tbl_user (uid, username, passcode) VALUES (?, ?, ?)");
     } catch (const boost::mysql::error_with_diagnostics &ec) {
         // 关闭连接防止连接泄漏
-
         spdlog::error("Failed to prepare statements in DBConn: {}, db diag: {}", ec.what(), ec.get_diagnostics().server_message());
         this->Close();
         // valid_ = false;
@@ -119,14 +118,4 @@ int DBConn::RegisterNew(std::string_view username, std::string_view passcode, ui
     }
     // unknown error
     return GATEWAY_UNKNOWN_ERROR; // unknown error
-}
-
-// ConnWrapper
-ConnWrapper::~ConnWrapper() {
-    if (dbm_ && conn_) {
-        // 如果dbm本身不再运行了，那么直接关闭连接即可（dbm已经关闭了），不必再归还连接
-        if (dbm_->running_) {
-            dbm_->ReturnIdleConn(std::move(conn_));
-        }
-    }
 }

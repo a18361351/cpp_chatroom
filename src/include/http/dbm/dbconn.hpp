@@ -6,6 +6,7 @@
 // #include <boost/mysql.hpp>
 #include <boost/mysql/statement.hpp>
 #include <boost/mysql/tcp.hpp>
+#include <boost/mysql/tcp_ssl.hpp>
 
 #include "log/log_manager.hpp"
 #include "utils/util_class.hpp"
@@ -32,9 +33,9 @@ struct DBConn {
     void ReconnectImpl(boost::mysql::error_code& err, std::string_view username, std::string_view password, std::string_view db_name);
 
     public:
-    DBConn(boost::asio::io_context& ctx, std::string_view mysql_addr, uint mysql_port) : conn(ctx), mysql_addr_(mysql_addr), mysql_port_(mysql_port) {}
+    DBConn(boost::asio::io_context& ctx, boost::asio::ssl::context& ssl_ctx, std::string_view mysql_addr, uint mysql_port) : conn(ctx, ssl_ctx), mysql_addr_(mysql_addr), mysql_port_(mysql_port) {}
     bool valid_{false};
-    boost::mysql::tcp_connection conn;
+    boost::mysql::tcp_ssl_connection conn;
     boost::mysql::statement login_check_stmt;
     boost::mysql::statement register_stmt;
     boost::mysql::statement exist_check_stmt;
@@ -85,26 +86,5 @@ struct DBConn {
     int RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid);
 };
 
-
-// RAII Wrapper class
-class ConnWrapper : public Noncopyable {
-    private:
-    using ConnPtr = std::shared_ptr<DBConn>;
-    ConnPtr conn_;
-    DBM* dbm_;
-    public:
-    ConnWrapper(ConnPtr&& ptr, DBM* pdbm) : conn_(std::move(ptr)), dbm_(pdbm) {}
-    ~ConnWrapper();
-    // Wrapper保护了其生命周期，那么用户就不应该再接触到这个shared_ptr
-    DBConn* Get() {
-        return conn_.get();
-    }
-    DBConn& operator*() {
-        return *conn_;
-    }
-    DBConn* operator->() {
-        return conn_.get();
-    }
-};
 
 #endif

@@ -18,17 +18,21 @@
 
 // TODO(user): LOG!!!!!!!
 
+inline void InitializeSSL() {
+    SSL_library_init();
+}
 
 // 管理数据库连接的类，隐藏了数据库连接的细节
 class DBM : public Noncopyable {
     public:
-    friend class ConnWrapper;
     DBM(std::string username, 
         std::string password, std::string db_name,
         std::string mysql_addr, uint mysql_port)
-        : dbm_ctx_(),
-          username_(std::move(username)), password_(std::move(password)), db_name_(std::move(db_name)),
+        : dbm_ctx_()
+          , ssl_ctx_{boost::asio::ssl::context::method::tls_client}
+          , username_(std::move(username)), password_(std::move(password)), db_name_(std::move(db_name)),
           mysql_addr_(std::move(mysql_addr)), mysql_port_(mysql_port) {
+            ssl_ctx_.set_verify_mode(SSL_VERIFY_NONE);  // 不进行验证（非生产模式）
             spdlog::debug("DBM created");
           }
     ~DBM() {
@@ -37,8 +41,6 @@ class DBM : public Noncopyable {
 
     public:
     using ConnPtr = std::shared_ptr<DBConn>;  
-
-
     public:
     // class DBM
     
@@ -56,9 +58,6 @@ class DBM : public Noncopyable {
     // Convenient intf
     int VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid);
     int RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid);
-
-    // Expose connection obj to user
-    ConnWrapper GetIdleConnWrapper();
     
     private:
     // Inner impl
@@ -69,6 +68,7 @@ class DBM : public Noncopyable {
 
     // 连接对象可能共享给其他人，同时有可能出现Stop()之后，仍有正在运行的SQL操作的情况。我们必须通过某种方式控制连接的生命周期（这里先选择shared_ptr）
     boost::asio::io_context dbm_ctx_;
+    boost::asio::ssl::context ssl_ctx_;
     std::vector<ConnPtr> conns_;
     std::queue<ConnPtr> free_queue_;    // 无操作的连接队列
     std::mutex latch_;  // 保护并发安全的互斥锁

@@ -102,8 +102,13 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     }
     auto addr = rpc_resp.server_addr();
 
+    // 更新用户在Redis缓存中的信息
+    if (!redis_->UpdateUserInfo(std::to_string(uid), username)) {
+        spdlog::warn("Redis UpdateUserInfo failed");
+    }
+
     // 检查用户的登录状态
-    auto check_result = redis_->UserLoginAttempt(std::to_string(uid), username);
+    auto check_result = redis_->UserLoginAttempt(std::to_string(uid));
     if (!check_result.first) { // 尝试登录请求失败：用户已登录或无法查询在线状态
         if (!check_result.second.has_value()) { // 无法查询在线状态
             spdlog::error("Redis UserLoginAttempt failed");

@@ -8,6 +8,14 @@ using namespace std;
 using GatewayApp = chatroom::gateway::GatewayClass;
 namespace asio = boost::asio;
 namespace ip = asio::ip;
+
+const std::string mysql_addr = "192.168.56.101";
+const int mysql_port = 3306;
+
+const std::string username = "lance";
+const std::string password = "123456";
+const std::string db_name = "chat";
+
 int main() {
     asio::io_context http_ctx;
     ip::tcp::endpoint ep(ip::tcp::v4(), 1234);
@@ -28,7 +36,16 @@ int main() {
     pool_opt.size = 3;  // 连接池中最大连接数
     // pool_opt.wait_timeout = std::chrono::milliseconds(100); // 当所有连接不空闲时，新的请求应该等待多久？默认是永久等待
     pool_opt.connection_lifetime = std::chrono::minutes(10);    // 连接的最大生命时长，超过时长连接会过期并重新建立
-    gateway.Initialize(ep, conn_opt, pool_opt, status_ep);
+
+    // 数据库连接选项
+    chatroom::gateway::DBConfigure db_conf;
+    db_conf.username_ = username;
+    db_conf.password_ = password;
+    db_conf.db_name_ = db_name;
+    db_conf.mysql_addr_ = mysql_addr;
+    db_conf.mysql_port_ = mysql_port;
+
+    gateway.Initialize(db_conf, ep, conn_opt, pool_opt, status_ep);
 
     gateway.Run(10);
 
