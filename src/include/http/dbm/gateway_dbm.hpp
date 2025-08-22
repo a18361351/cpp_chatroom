@@ -1,49 +1,46 @@
 #ifndef HTTP_GATEWAY_DBM_HEADER
 #define HTTP_GATEWAY_DBM_HEADER
 
+#include <condition_variable>
+#include <queue>
 #include <string>
 #include <string_view>
-#include <queue>
-#include <condition_variable>
 #include <utility>
 #include <vector>
 
 // #include <boost/asio.hpp>
 #include <boost/asio/io_context.hpp>
 
-#include "utils/util_class.hpp"
 #include "http/dbm/dbconn.hpp"
 #include "log/log_manager.hpp"
-
+#include "utils/util_class.hpp"
 
 // TODO(user): LOG!!!!!!!
 
-inline void InitializeSSL() {
-    SSL_library_init();
-}
+inline void InitializeSSL() { SSL_library_init(); }
 
 // 管理数据库连接的类，隐藏了数据库连接的细节
 class DBM : public Noncopyable {
-    public:
-    DBM(std::string username, 
-        std::string password, std::string db_name,
-        std::string mysql_addr, uint mysql_port)
-        : dbm_ctx_()
-          , ssl_ctx_{boost::asio::ssl::context::method::tls_client}
-          , username_(std::move(username)), password_(std::move(password)), db_name_(std::move(db_name)),
-          mysql_addr_(std::move(mysql_addr)), mysql_port_(mysql_port) {
-            ssl_ctx_.set_verify_mode(SSL_VERIFY_NONE);  // 不进行验证（非生产模式）
-            spdlog::debug("DBM created");
-          }
-    ~DBM() {
-        spdlog::debug("DBM destroyed");
+   public:
+    DBM(std::string username, std::string password, std::string db_name, std::string mysql_addr, uint mysql_port)
+        : dbm_ctx_(),
+          ssl_ctx_{boost::asio::ssl::context::method::tls_client},
+          username_(std::move(username)),
+          password_(std::move(password)),
+          db_name_(std::move(db_name)),
+          mysql_addr_(std::move(mysql_addr)),
+          mysql_port_(mysql_port) {
+        ssl_ctx_.set_verify_mode(SSL_VERIFY_NONE);  // 不进行验证（非生产模式）
+        spdlog::debug("DBM created");
     }
+    ~DBM() { spdlog::debug("DBM destroyed"); }
 
-    public:
-    using ConnPtr = std::shared_ptr<DBConn>;  
-    public:
+   public:
+    using ConnPtr = std::shared_ptr<DBConn>;
+
+   public:
     // class DBM
-    
+
     // Start and stop
 
     // @brief 启动SQL数据库连接池
@@ -56,25 +53,25 @@ class DBM : public Noncopyable {
     bool Stop();
 
     // Convenient intf
-    int VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid);
+    int VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t &uid);
     int RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid);
-    
-    private:
+
+   private:
     // Inner impl
     // @brief 创建新的连接，该函数不检查池子大小，调用者应该自己检查
     ConnPtr CreateConn();
     ConnPtr GetIdleConn();
-    void ReturnIdleConn(ConnPtr&& ptr);
+    void ReturnIdleConn(ConnPtr &&ptr);
 
     // 连接对象可能共享给其他人，同时有可能出现Stop()之后，仍有正在运行的SQL操作的情况。我们必须通过某种方式控制连接的生命周期（这里先选择shared_ptr）
     boost::asio::io_context dbm_ctx_;
     boost::asio::ssl::context ssl_ctx_;
     std::vector<ConnPtr> conns_;
-    std::queue<ConnPtr> free_queue_;    // 无操作的连接队列
-    std::mutex latch_;  // 保护并发安全的互斥锁
-    std::condition_variable cv_;    // 用于唤醒消费者的条件变量（消费者是阻塞等待空闲连接的线程）
-    uint pool_size_{};        // 当前池子的连接数量
-    uint pool_max_cap_{};     // 池子的最大连接数量
+    std::queue<ConnPtr> free_queue_;  // 无操作的连接队列
+    std::mutex latch_;                // 保护并发安全的互斥锁
+    std::condition_variable cv_;  // 用于唤醒消费者的条件变量（消费者是阻塞等待空闲连接的线程）
+    uint pool_size_{};            // 当前池子的连接数量
+    uint pool_max_cap_{};         // 池子的最大连接数量
     // DBM中保存的服务器数据
     std::string username_;
     std::string password_;

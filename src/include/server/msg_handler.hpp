@@ -5,13 +5,13 @@
 //  其也负责Redis服务中用户在线状态的更新
 
 #include <condition_variable>
-#include <queue>
 #include <cstdint>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
 #include <deque>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <unordered_map>
 
 #include "common/msgnode.hpp"
 #include "server/online_status_upload.hpp"
@@ -19,50 +19,47 @@
 #include "server/session_manager.hpp"
 #include "utils/util_class.hpp"
 
-
 namespace chatroom::backend {
-    
 
-    using CbSessType = std::shared_ptr<chatroom::backend::Session>;
-    using RcvdMsgType = std::shared_ptr<chatroom::MsgNode>; // ReceiveMsg
+using CbSessType = std::shared_ptr<chatroom::backend::Session>;
+using RcvdMsgType = std::shared_ptr<chatroom::MsgNode>;  // ReceiveMsg
 
-    // 对于特定tag消息的回调函数，传入参数为Session和MsgNode
-    using FuncCallback = 
-        std::function<void(CbSessType, RcvdMsgType)>;
+// 对于特定tag消息的回调函数，传入参数为Session和MsgNode
+using FuncCallback = std::function<void(CbSessType, RcvdMsgType)>;
 
-    class MsgHandler {
-        public:
-        MsgHandler(uint32_t server_id, std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis, std::shared_ptr<OnlineStatusUploader> status_uploader) : 
-            server_id_(std::to_string(server_id))
-            , sess_mgr_(std::move(sess_mgr)) 
-            , redis_(std::move(redis))
-            , status_uploader_(std::move(status_uploader)) {}
+class MsgHandler {
+   public:
+    MsgHandler(uint32_t server_id, std::shared_ptr<SessionManager> sess_mgr, std::shared_ptr<RedisMgr> redis,
+               std::shared_ptr<OnlineStatusUploader> status_uploader)
+        : server_id_(std::to_string(server_id)),
+          sess_mgr_(std::move(sess_mgr)),
+          redis_(std::move(redis)),
+          status_uploader_(std::move(status_uploader)) {}
 
-        // @brief 异步向处理队列投递一个消息，并进行处理
-        // @param sess 指向Session对象的指针
-        // @param msg  指向消息节点的指针；特别的，msg为空指针时，表示一个Session下线了
-        bool PostMessage(CbSessType sess, RcvdMsgType msg);
+    // @brief 异步向处理队列投递一个消息，并进行处理
+    // @param sess 指向Session对象的指针
+    // @param msg  指向消息节点的指针；特别的，msg为空指针时，表示一个Session下线了
+    bool PostMessage(CbSessType sess, RcvdMsgType msg);
 
-        // @brief 启动消息处理器的工作线程
-        bool Start();
+    // @brief 启动消息处理器的工作线程
+    bool Start();
 
-        // @brief 关闭消息处理器，停止其工作线程并join
-        bool Stop();
-        private:
-        void Worker();
-        void Processor(CbSessType&&, RcvdMsgType&&);
-        std::string server_id_;
-        std::mutex lck_;
-        std::condition_variable cv_;
-        std::thread worker_;
-        std::queue<std::pair<CbSessType, RcvdMsgType>> q_;
-        std::shared_ptr<SessionManager> sess_mgr_;  // SessionManager本身保证线程安全
-        std::shared_ptr<RedisMgr> redis_;   // backend的redis管理器
-        std::shared_ptr<OnlineStatusUploader> status_uploader_; // 更新用户在线状态的对象
-        bool running_{false};
-    };
-}
+    // @brief 关闭消息处理器，停止其工作线程并join
+    bool Stop();
 
+   private:
+    void Worker();
+    void Processor(CbSessType &&, RcvdMsgType &&);
+    std::string server_id_;
+    std::mutex lck_;
+    std::condition_variable cv_;
+    std::thread worker_;
+    std::queue<std::pair<CbSessType, RcvdMsgType>> q_;
+    std::shared_ptr<SessionManager> sess_mgr_;               // SessionManager本身保证线程安全
+    std::shared_ptr<RedisMgr> redis_;                        // backend的redis管理器
+    std::shared_ptr<OnlineStatusUploader> status_uploader_;  // 更新用户在线状态的对象
+    bool running_{false};
+};
+}  // namespace chatroom::backend
 
-
-#endif 
+#endif

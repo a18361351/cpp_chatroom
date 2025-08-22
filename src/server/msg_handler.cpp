@@ -1,8 +1,10 @@
+#include "server/msg_handler.hpp"
+
 #include <jsoncpp/json/json.h>
+
 #include <string_view>
 
 #include "log/log_manager.hpp"
-#include "server/msg_handler.hpp"
 #include "utils/field_op.hpp"
 
 bool chatroom::backend::MsgHandler::PostMessage(CbSessType sess, RcvdMsgType msg) {
@@ -21,9 +23,7 @@ bool chatroom::backend::MsgHandler::Start() {
         return false;
     }
     running_ = true;
-    worker_ = std::thread([this] {
-        this->Worker();
-    });
+    worker_ = std::thread([this] { this->Worker(); });
     return true;
 }
 
@@ -35,7 +35,7 @@ bool chatroom::backend::MsgHandler::Stop() {
     running_ = false;
     lock.unlock();  // *********** EXIT CRITICAL **********
     cv_.notify_all();
-    
+
     worker_.join();
     spdlog::info("MsgHandler worker thread exited");
     // worker_ = std::thread(); // MsgHandler没有重复使用的需求
@@ -61,10 +61,10 @@ void chatroom::backend::MsgHandler::Worker() {
 
 // TODO(user): unfinished
 // 消息处理逻辑
-void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& msg) {
+void chatroom::backend::MsgHandler::Processor(CbSessType &&sess, RcvdMsgType &&msg) {
     if (!sess) {
         spdlog::warn("MsgHandler: Received message with null session pointer");
-        return; // 无效的会话
+        return;  // 无效的会话
     }
     if (!msg) {
         if (sess->IsVerified()) {
@@ -77,16 +77,14 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
     }
 
     uint32_t msg_type = msg->GetTagField();
-    status_uploader_->AddSession(sess->GetUserId());    // 收到了用户发送的消息，我们更新其在线状态
+    status_uploader_->AddSession(sess->GetUserId());  // 收到了用户发送的消息，我们更新其在线状态
     switch (msg_type) {
-        case DEBUG:
-        {
+        case DEBUG: {
             // spdlog::debug(std::string(msg->GetContent(), msg->GetContentLen()));
             spdlog::info("Data received: {}", std::string(msg->GetContent(), msg->GetContentLen()));
             break;
         }
-        case VERIFY:
-        {
+        case VERIFY: {
             spdlog::debug("Verify message received");
             if (sess->IsVerified()) {
                 // 无需重复验证
@@ -106,7 +104,7 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             try {
                 token = root["token"].asString();
                 uid = root["uid"].asUInt64();
-            } catch (std::exception& e) {
+            } catch (std::exception &e) {
                 spdlog::error("Invalid verify message");
                 sess->Close();  // 关闭会话
                 sess_mgr_->RemoveTempSession(sess.get());
@@ -126,10 +124,8 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             sess_mgr_->AddSession(uid, sess);
             redis_->UpdateUserStatus(server_id_, uid);
             sess->Send("Welcome to the chatroom!", VERIFY_DONE);
-        }
-        break;
-        case CHAT_MSG:
-        {
+        } break;
+        case CHAT_MSG: {
             spdlog::debug("Chat message received");
             if (!sess->IsVerified()) {
                 // 未验证的用户无法发送消息
@@ -145,7 +141,9 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
                 if (sid.has_value()) {
                     spdlog::debug("Sending message to server {}", sid.value());
                     // 通过消息队列（Redis Stream）发送给对方服务器
-                    auto ret = redis_->SendToMsgQueue(sid.value(), sess->GetUserId(), target_uid, std::string_view(msg->GetContent() + sizeof(uint64_t), msg->GetContent() + msg->GetContentLen()));
+                    auto ret = redis_->SendToMsgQueue(sid.value(), sess->GetUserId(), target_uid,
+                                                      std::string_view(msg->GetContent() + sizeof(uint64_t),
+                                                                       msg->GetContent() + msg->GetContentLen()));
                     spdlog::debug("Message sent with return value: {}", ret);
                 } else {
                     // 用户不在线，需要进一步查询（可能需要查MySQL数据库来确定用户是否存在）
@@ -161,10 +159,8 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
                 // 剩余内容不需要修改
                 target_sess->Send(std::move(msg));
             }
-        }
-        break;
-        case GROUP_CHAT_MSG:
-        {
+        } break;
+        case GROUP_CHAT_MSG: {
             // TODO(user): 完成群聊功能
             spdlog::debug("GroupChat message received");
             if (!sess->IsVerified()) {
@@ -173,17 +169,13 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
             }
             // uint64_t target_group;
             return;
-        }
-        break;
-        case PING:
-        {
+        } break;
+        case PING: {
             // do nothing
-        }
-        break;
-        default: 
-        {
+        } break;
+        default: {
             spdlog::warn("Unknown message type: {}", msg_type);
-            return; // 不知道如何处理
+            return;  // 不知道如何处理
         }
     }
 }

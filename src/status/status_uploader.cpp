@@ -1,19 +1,17 @@
 #include "status/status_uploader.hpp"
-#include "log/log_manager.hpp"
 
+#include "log/log_manager.hpp"
 
 void chatroom::status::TimedUploader::Start() {
     running_ = true;
-    worker_ = std::thread([this] {
-        this->WorkerFn();
-    });
+    worker_ = std::thread([this] { this->WorkerFn(); });
 }
 
 void chatroom::status::TimedUploader::Stop() {
     {
         std::unique_lock<std::mutex> lock(mtx_);
         running_ = false;
-        cv_.notify_all();   // WAKE UP!
+        cv_.notify_all();  // WAKE UP!
     }
     worker_.join();
 }
@@ -34,7 +32,7 @@ void chatroom::status::TimedUploader::WorkerFn() {
                 pending_ = true;
             }
         }
-        if (!running_) break;   // 退出循环
+        if (!running_) break;  // 退出循环
         // 让我们退出临界区……执行实际上传操作……
         lock.unlock();
         // ======= CRITICAL EXIT ===========
@@ -44,7 +42,7 @@ void chatroom::status::TimedUploader::WorkerFn() {
         std::vector<chatroom::status::ServerInfo> out;
         balancer_->CopyServerInfoList(out);
         std::unordered_map<std::string, std::string> serv_list;
-        for (auto& item : out) {
+        for (auto &item : out) {
             serv_list.emplace(std::to_string(item.id), std::move(item.addr));
         }
         bool ret = redis_->UpdateServerList(serv_list);

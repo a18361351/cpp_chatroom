@@ -1,31 +1,33 @@
-#include <string>
-#include <sys/types.h>
+#include "status/status_class.hpp"
 
-#include <grpcpp/security/server_credentials.h>
-#include <grpcpp/support/status.h>
 #include <grpcpp/completion_queue.h>
+#include <grpcpp/security/server_credentials.h>
+#include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/async_unary_call.h>
-#include <grpcpp/server_builder.h>
+#include <grpcpp/support/status.h>
 #include <sw/redis++/connection_pool.h>
+#include <sys/types.h>
+
+#include <string>
 
 #include "log/log_manager.hpp"
-#include "status/status_class.hpp"
 
 // using namespace chatroom::status;
 
-void chatroom::status::StatusRPCManager::Run(const std::string& rpc_address) {
+void chatroom::status::StatusRPCManager::Run(const std::string &rpc_address) {
     if (!server_) {
         // StatusServiceImpl service(redis_mgr_, load_balancer_);
         assert(!service_);
         service_ = std::make_unique<StatusServiceImpl>(redis_mgr_, load_balancer_, uploader_);
-        
+
         grpc::ServerBuilder builder;
         builder.AddListeningPort(rpc_address, grpc::InsecureServerCredentials());
         builder.RegisterService(service_.get());
 
         server_ = builder.BuildAndStart();
-        // The server must be either shutting down or some other thread must call Shutdown for this function to ever return.
+        // The server must be either shutting down or some other thread must call Shutdown for this function to ever
+        // return.
         server_->Wait();
     }
 }
@@ -39,7 +41,9 @@ void chatroom::status::StatusRPCManager::Stop() {
     }
 }
 
-bool chatroom::status::StatusServer::RunStatusServer(const string& rpc_address, const sw::redis::ConnectionOptions& conn_opt, const sw::redis::ConnectionPoolOptions& pool_opt) {
+bool chatroom::status::StatusServer::RunStatusServer(const string &rpc_address,
+                                                     const sw::redis::ConnectionOptions &conn_opt,
+                                                     const sw::redis::ConnectionPoolOptions &pool_opt) {
     if (!running_) {
         // Load balancer initialize
         spdlog::info("LoadBalancer init");
@@ -77,7 +81,7 @@ void chatroom::status::StatusServer::StopStatusServer() {
 
         // redis...
         redis_mgr_.reset();
-        
+
         // balancer...
         load_balancer_.reset();
         running_ = false;

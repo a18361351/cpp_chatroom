@@ -3,4 +3,4 @@
 
 #include <spdlog/spdlog.h>
 
-#endif 
+#endif

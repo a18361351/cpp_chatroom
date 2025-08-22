@@ -1,10 +1,11 @@
 
+#include "http/dbm/gateway_dbm.hpp"
+
 #include <boost/mysql.hpp>
 
-#include "http/dbm/gateway_dbm.hpp"
 #include "http/dbm/security.hpp"
 
-using ConnPtr = std::shared_ptr<DBConn>;  
+using ConnPtr = std::shared_ptr<DBConn>;
 
 bool DBM::Start(uint conns, uint max_conn) {
     if (!running_) {
@@ -19,7 +20,7 @@ bool DBM::Start(uint conns, uint max_conn) {
                 // 当连接池连接出现错误时，我们应该怎么做？不断重新连接？断开其他连接并表示错误？保留现有的连接然后继续下一个？
                 // 当连接出现问题时，很有可能表示网络中断，或者服务器宕机。如果不断重新连接应该是不必要的。
                 // 那么我们直接清理资源，断开所有连接。
-                for (auto& conn : conns_) {
+                for (auto &conn : conns_) {
                     conn->Close();
                 }
                 conns_.clear();
@@ -29,8 +30,8 @@ bool DBM::Start(uint conns, uint max_conn) {
         pool_size_ = conns;
         pool_max_cap_ = max_conn;
         running_ = true;
-        
-        for (auto& conn : conns_) {
+
+        for (auto &conn : conns_) {
             free_queue_.push(conn);
         }
 
@@ -41,7 +42,7 @@ bool DBM::Start(uint conns, uint max_conn) {
 
 bool DBM::Stop() {
     if (running_) {
-        for (auto& conn : conns_) {
+        for (auto &conn : conns_) {
             if (!conn->Close()) {
                 // error when closing
                 // TODO(user): some logging
@@ -50,7 +51,7 @@ bool DBM::Stop() {
         }
         conns_.clear();
         running_ = false;
-        cv_.notify_all();   // WAKE UP!
+        cv_.notify_all();  // WAKE UP!
         pool_size_ = 0;
         pool_max_cap_ = 0;
         return true;
@@ -58,10 +59,10 @@ bool DBM::Stop() {
     return false;
 }
 
-int DBM::VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t& uid) {
+int DBM::VerifyUserInfo(std::string_view username, std::string_view passcode, uint64_t &uid) {
     auto conn = GetIdleConn();
     if (!conn) {
-        return GATEWAY_UNKNOWN_ERROR;   // 连接失败，或其他错误
+        return GATEWAY_UNKNOWN_ERROR;  // 连接失败，或其他错误
     }
     int ret = conn->VerifyUserInfo(username, passcode, uid);
     ReturnIdleConn(std::move(conn));
@@ -71,7 +72,7 @@ int DBM::VerifyUserInfo(std::string_view username, std::string_view passcode, ui
 int DBM::RegisterNew(std::string_view username, std::string_view passcode, uint64_t uid) {
     auto conn = GetIdleConn();
     if (!conn) {
-        return GATEWAY_UNKNOWN_ERROR;   // 连接失败，或其他错误
+        return GATEWAY_UNKNOWN_ERROR;  // 连接失败，或其他错误
     }
     int ret = conn->RegisterNew(username, passcode, uid);
     ReturnIdleConn(std::move(conn));
@@ -114,7 +115,7 @@ ConnPtr DBM::GetIdleConn() {
     return conn;
 }
 
-void DBM::ReturnIdleConn(ConnPtr&& ptr) {
+void DBM::ReturnIdleConn(ConnPtr &&ptr) {
     if (ptr) {
         std::unique_lock<std::mutex> lock(latch_);
         bool wake = free_queue_.empty();

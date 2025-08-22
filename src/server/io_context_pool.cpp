@@ -11,26 +11,24 @@ IOContextPool::IOContextPool(std::size_t size) : ctxs_(size > 0 ? size : 4), wor
 
     // 对每个io_context，创建线程并执行（绑定）
     for (std::size_t i = 0; i < size; ++i) {
-        threads_.emplace_back([&ctx = ctxs_[i]]() {
-            ctx.run();
-        });
+        threads_.emplace_back([&ctx = ctxs_[i]]() { ctx.run(); });
     }
 }
 
 // 线程安全
 // Round-robin!
-IOContextPool::IOContext& IOContextPool::GetNextIOContext() {
+IOContextPool::IOContext &IOContextPool::GetNextIOContext() {
     std::unique_lock<std::mutex> lck(latch_);
     nxt_ = nxt_ % ctxs_.size();
-    IOContext& ctx = ctxs_[nxt_++];
+    IOContext &ctx = ctxs_[nxt_++];
     return ctx;
 }
 
 void IOContextPool::Stop() {
-    for (auto& work : works_) {
+    for (auto &work : works_) {
         work.reset();
     }
-    for (auto& t : threads_) {
+    for (auto &t : threads_) {
         t.join();
     }
 }

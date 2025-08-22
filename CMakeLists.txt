@@ -71,10 +71,16 @@ add_subdirectory(test)
 ## Clang-tidy-check target
 find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-14)
 
+file(GLOB_RECURSE ALL_SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+)
+
+file(GLOB_RECURSE ALL_SRC_HEADER_FILES
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/*.hpp
+)
+
 if(CLANG_TIDY_EXE)
-    file(GLOB_RECURSE ALL_SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/src/*.cpp
-    )
 
     add_custom_target(
         clang-tidy-check
@@ -109,3 +115,19 @@ else()
     message(STATUS "cppcheck not found, skipping cppcheck-check target.")
 endif()
 
+# clang-format
+find_program(CLANG_FORMAT_EXE NAMES clang-format clang-format-14)
+
+if (CLANG_FORMAT_EXE)
+    add_custom_target(
+        format
+        COMMAND ${CLANG_FORMAT_EXE}
+                -i
+                -style=file
+                ${ALL_SRC_HEADER_FILES}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running clang-format..."
+    )
+else()
+    message(STATUS "clang-format not found, skipping clang-format-check target.")
+endif()

@@ -1,26 +1,10 @@
-#include <algorithm>
-#include <chrono>
 #include <iostream>
 #include <memory>
-#include <spdlog/common.h>
 #include <string>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/write.hpp>
-#include <boost/asio/read.hpp>
-#include <json/value.h>
-#include <json/reader.h>
-#include <json/writer.h>
-
 #include "client/client_class.hpp"
-#include "common/msgnode.hpp"
 #include "common/timer.hpp"
 #include "log/log_manager.hpp"
-#include "utils/field_op.hpp"
 #include "utils/util_class.hpp"
 
 using errcode = boost::system::error_code;
@@ -28,11 +12,6 @@ using errcode = boost::system::error_code;
 using namespace boost::asio;
 using namespace std;
 using namespace chatroom;
-namespace beast = boost::beast;
-namespace http = beast::http;
-
-
-
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
@@ -69,7 +48,7 @@ int main() {
                 } else {
                     cout << "Login failed\n";
                 }
-            } catch (const std::exception& e) {
+            } catch (const std::exception &e) {
                 cout << "Exception: " << e.what() << "\n";
                 continue;
             }
@@ -110,14 +89,12 @@ int main() {
 
     ip::tcp::endpoint remote(ip::make_address(server_host), stoi(server_port));
     // 使用异步线程来接收消息，简单处理
-    std::thread receiver([sess, remote]() {
-        sess->Start(remote);
-    });
+    std::thread receiver([sess, remote]() { sess->Start(remote); });
     sess->Verify(uid, token);
     // Timer task用来发送心跳包
     TimerTaskManager tm_mgr;
     auto task = tm_mgr.CreateTimer(std::chrono::milliseconds(5000), [sess] {
-        sess->Send("PING", 4, PING);   // 心跳包
+        sess->Send("PING", 4, PING);  // 心跳包
     });
     (*task)->Activate();
     std::array<char, 255> inp;
@@ -132,7 +109,8 @@ int main() {
         }
         if (inp[0] == '\\') {
             // command
-            string command; vector<string> args;
+            string command;
+            vector<string> args;
             auto sep = find(inp.begin(), inp.begin() + end_pos, ' ');
             if (sep < inp.begin() + end_pos) {
                 command = string(inp.begin() + 1, sep);

@@ -7,26 +7,28 @@
 //  friend class Singleton<Type>;
 template <typename T>
 class Singleton {
-public:
-    static T& GetInstance() {
+   public:
+    static T &GetInstance() {
         static T inst;
         return inst;
     }
-    Singleton(const Singleton&) = delete;
-    Singleton& operator=(const Singleton&) = delete;
-private:
+    Singleton(const Singleton &) = delete;
+    Singleton &operator=(const Singleton &) = delete;
+
+   private:
     Singleton() = default;
     ~Singleton() = default;
 };
 
 // 禁止类对象拷贝的工具类
 class Noncopyable {
-protected:
+   protected:
     Noncopyable() = default;
     ~Noncopyable() = default;
-public:
-    Noncopyable& operator=(const Noncopyable&) = delete;
-    Noncopyable(const Noncopyable&) = delete;
+
+   public:
+    Noncopyable &operator=(const Noncopyable &) = delete;
+    Noncopyable(const Noncopyable &) = delete;
 };
 
 // 使用方式：

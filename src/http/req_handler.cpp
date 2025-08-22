@@ -1,31 +1,31 @@
-#include <grpcpp/support/status.h>
-#include <iostream>
-
 #include "http/req_handler.hpp"
 
+#include <grpcpp/support/status.h>
 #include <json/value.h>
-#include <jsoncpp/json/writer.h>
 #include <jsoncpp/json/json.h>
+#include <jsoncpp/json/writer.h>
 #include <sys/types.h>
 
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+#include <iostream>
+
+namespace beast = boost::beast;    // from <boost/beast.hpp>
+namespace http = beast::http;      // from <boost/beast/http.hpp>
+using tcp = boost::asio::ip::tcp;  // from <boost/asio/ip/tcp.hpp>
 using namespace std;
 
 // FIXME(user): 返回的body最好是json
 
 // 解析请求的部分
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::request_handler(http::request<boost::beast::http::string_body>&& req) {
-    switch(req.method()) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::RequestHandler(
+    http::request<boost::beast::http::string_body> &&req) {
+    switch (req.method()) {
         case http::verb::get:
-            return get_handler(std::move(req));
+            return GetHandler(std::move(req));
         case http::verb::post:
-            return post_handler(std::move(req));
+            return PostHandler(std::move(req));
         default:
-            return bad_request(std::move(req), "Unsupported HTTP-method for this server");
+            return BadRequest(std::move(req), "Unsupported HTTP-method for this server");
     }
-
 }
 
 inline string TokenGenerator() {
@@ -36,18 +36,21 @@ inline string TokenGenerator() {
     size_t len = 4 * ((token_bytes.size() + 2) / 3);
     string token(len, 0);
 
-    EVP_EncodeBlock(reinterpret_cast<unsigned char*>(&token[0]), token_bytes.data(), token_bytes.size());   // NOLINT
+    EVP_EncodeBlock(reinterpret_cast<unsigned char *>(&token[0]), token_bytes.data(), token_bytes.size());  // NOLINT
     // 转换为URL安全格式
-    for (char& c : token) {
-        if (c == '+') c = '-';
-        else if (c == '/') c = '_';
+    for (char &c : token) {
+        if (c == '+')
+            c = '-';
+        else if (c == '/')
+            c = '_';
     }
     token.erase(remove(token.begin(), token.end(), '='), token.end());
     return token;
 }
 
 // 对/login的POST请求
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(http::request<boost::beast::http::string_body>&& req) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
+    http::request<boost::beast::http::string_body> &&req) {
     // TODO(user): 为重复登录的情况作检查
 
     http::response<http::string_body> resp;
@@ -59,7 +62,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     bool ret = rr.parse(req.body(), readed, false);
     if (!ret) {
         spdlog::error("Error occured when parsing json");
-        return bad_request(std::move(req), "Invalid request format");
+        return BadRequest(std::move(req), "Invalid request format");
     }
     string username, passcode;
     try {
@@ -67,7 +70,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         passcode = readed["passcode"].asString();
     } catch (...) {
         spdlog::error("JSON format doesn't match");
-        return bad_request(std::move(req), "Invalid request format");
+        return BadRequest(std::move(req), "Invalid request format");
     }
 
     // 传入MySQL数据库进行身份验证
@@ -77,17 +80,20 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     switch (db_ret) {
         case GATEWAY_SUCCESS:
             // 登录成功
-            spdlog::info("User {} verified successfully", username);        // 身份验证成功，下一步
+            spdlog::info("User {} verified successfully", username);  // 身份验证成功，下一步
             break;
-        case GATEWAY_USER_NOT_EXIST: case GATEWAY_VERIFY_FAILED:
+        case GATEWAY_USER_NOT_EXIST:
+        case GATEWAY_VERIFY_FAILED:
             spdlog::info("Incorrect login attempt by user {}", username);
-            return forbidden_request(std::move(req), "Incorrect login username or password");   // 对客户隐藏具体的错误信息
+            return ForbiddenRequest(std::move(req),
+                                    "Incorrect login username or password");  // 对客户隐藏具体的错误信息
         case GATEWAY_MYSQL_SERVER_ERROR:
             spdlog::error("Mysql server error when user {} login", username);
-            return server_error(std::move(req), "Server error");
-        case GATEWAY_UNKNOWN_ERROR: default:
+            return ServerError(std::move(req), "Server error");
+        case GATEWAY_UNKNOWN_ERROR:
+        default:
             spdlog::error("Unknown error when user {} login", username);
-            return server_error(std::move(req), "Server error");
+            return ServerError(std::move(req), "Server error");
     }
 
     // 验证成功，通过RPC获取服务器信息
@@ -98,7 +104,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     grpc::Status rpc_status = stub->CheckMinimalLoadServer(&ctx, rpc_req, &rpc_resp);
     if (!rpc_status.ok()) {
         spdlog::error("Status RPC call failed: {}", rpc_status.error_message());
-        return server_error(std::move(req), "Server error"); // 对客户隐藏具体的错误信息
+        return ServerError(std::move(req), "Server error");  // 对客户隐藏具体的错误信息
     }
     auto addr = rpc_resp.server_addr();
 
@@ -109,17 +115,17 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
 
     // 检查用户的登录状态
     auto check_result = redis_->UserLoginAttempt(std::to_string(uid));
-    if (!check_result.first) { // 尝试登录请求失败：用户已登录或无法查询在线状态
-        if (!check_result.second.has_value()) { 
+    if (!check_result.first) {  // 尝试登录请求失败：用户已登录或无法查询在线状态
+        if (!check_result.second.has_value()) {
             // 无法查询在线状态
             spdlog::error("Redis UserLoginAttempt failed");
-            return server_error(std::move(req), "Server error");
+            return ServerError(std::move(req), "Server error");
         }
         if (check_result.second.value() == "unset") {
             // 其他用户正在试图登录中！阻止本次登录。
             // TODO(user): 换一个响应码
             spdlog::info("Another client is trying to login!");
-            return forbidden_request(std::move(req), "Another client is trying to login!");
+            return ForbiddenRequest(std::move(req), "Another client is trying to login!");
         }
         // 否则，就是用户已登录的情况
         // 我们实现的思路为：
@@ -133,13 +139,13 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
         // 向客户端发送重试消息
         resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         resp.set(http::field::content_type, "application/json");
-        resp.result(http::status::conflict);    // 409 Conflict
+        resp.result(http::status::conflict);  // 409 Conflict
         resp.keep_alive(req.keep_alive());
         Json::Value retry_resp;
         Json::StreamWriterBuilder writer;
         retry_resp["result"] = "retry";
         retry_resp["message"] = "User already online, please retry later";
-        
+
         resp.body() = Json::writeString(writer, retry_resp);
         resp.prepare_payload();
         return resp;
@@ -147,8 +153,8 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
 
     // 生成用户的token
     string token = TokenGenerator();
-    redis_->RegisterUserToken(token, std::to_string(uid), 50); // 默认50秒的token存活时间
-    
+    redis_->RegisterUserToken(token, std::to_string(uid), 50);  // 默认50秒的token存活时间
+
     // 现在，把token以及服务器地址打包，发送给用户
     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     resp.set(http::field::content_type, "application/json");
@@ -165,7 +171,8 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     return resp;
 }
 
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegisterLogic(http::request<boost::beast::http::string_body>&& req) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegisterLogic(
+    http::request<boost::beast::http::string_body> &&req) {
     http::response<http::string_body> resp;
     // 注册逻辑
     // TODO(user): 未来加入验证码功能，以及限流功能，防止恶意注册
@@ -175,7 +182,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
     bool ret = rr.parse(req.body(), readed, false);
     if (!ret) {
         spdlog::error("Error occured when parsing json");
-        return bad_request(std::move(req), "Invalid request format");
+        return BadRequest(std::move(req), "Invalid request format");
     }
     string username, passcode;
     try {
@@ -183,7 +190,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
         passcode = readed["passcode"].asString();
     } catch (...) {
         spdlog::error("JSON format doesn't match");
-        return bad_request(std::move(req), "Invalid request format");
+        return BadRequest(std::move(req), "Invalid request format");
     }
     uint64_t uid = uid_gen_.Generate();
     spdlog::info("Attempt to register a new user {}", username);
@@ -194,13 +201,14 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
             break;
         case GATEWAY_REG_ALREADY_EXIST:
             spdlog::info("Duplicated register attempt by username {}", username);
-            return forbidden_request(std::move(req), "Username already exists");   
+            return ForbiddenRequest(std::move(req), "Username already exists");
         case GATEWAY_MYSQL_SERVER_ERROR:
             spdlog::error("Mysql server error when user {} register", username);
-            return server_error(std::move(req), "MySQL server error");
-        case GATEWAY_UNKNOWN_ERROR: default:
+            return ServerError(std::move(req), "MySQL server error");
+        case GATEWAY_UNKNOWN_ERROR:
+        default:
             spdlog::error("Unknown error when user {} register", username);
-            return server_error(std::move(req), "Server error");
+            return ServerError(std::move(req), "Server error");
     }
     Json::Value resp_json;
     Json::StreamWriterBuilder writer;
@@ -216,7 +224,8 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostRegiste
     return resp;
 }
 
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::PingLogic(http::request<boost::beast::http::string_body>&& req) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::PingLogic(
+    http::request<boost::beast::http::string_body> &&req) {
     http::response<http::string_body> resp;
     resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     resp.set(http::field::content_type, "text/html");
@@ -227,7 +236,8 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::PingLogic(h
     return resp;
 }
 
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::post_handler(http::request<boost::beast::http::string_body>&& req) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::PostHandler(
+    http::request<boost::beast::http::string_body> &&req) {
     // GET METHOD
     if (req.target() == "/login") {
         return LoginLogic(std::move(req));
@@ -236,20 +246,21 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::post_handle
     } else if (req.target() == "/ping") {
         return PingLogic(std::move(req));
     } else {
-        return not_found(std::move(req));
+        return NotFound(std::move(req));
     }
 }
 
-boost::beast::http::message_generator chatroom::gateway::ReqHandler::get_handler(http::request<boost::beast::http::string_body>&& req) {
+boost::beast::http::message_generator chatroom::gateway::ReqHandler::GetHandler(
+    http::request<boost::beast::http::string_body> &&req) {
     // GET METHOD
     http::response<http::string_body> resp;
     if (req.target() == "/login") {
-        return bad_request(std::move(req), "Bad method for login");
+        return BadRequest(std::move(req), "Bad method for login");
     } else if (req.target() == "/register") {
-        return bad_request(std::move(req), "Bad method for register");
+        return BadRequest(std::move(req), "Bad method for register");
     } else if (req.target() == "/ping") {
         return PingLogic(std::move(req));
     } else {
-        return not_found(std::move(req));
+        return NotFound(std::move(req));
     }
 }

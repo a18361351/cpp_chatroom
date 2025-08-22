@@ -8,21 +8,20 @@
 #include "common/redis/base_redis_mgr.hpp"
 
 namespace chatroom::status {
-    // Redis类管理器：负责独占Redis对象，并管理其生命周期
-    class RedisMgr : public chatroom::BaseRedisMgr {
-        public:
-        // ctors
-        RedisMgr() = default;
+// Redis类管理器：负责独占Redis对象，并管理其生命周期
+class RedisMgr : public chatroom::BaseRedisMgr {
+   public:
+    // ctors
+    RedisMgr() = default;
 
-        // dtors
-        ~RedisMgr() override = default;
+    // dtors
+    ~RedisMgr() override = default;
 
-        void RegisterScript() override;
-    
-        // @brief 状态服务器同时将自己的服务器列表上传至Redis服务器
-        bool UpdateServerList(std::unordered_map<std::string, std::string>& serv_list);
+    void RegisterScript() override;
 
-    };
+    // @brief 状态服务器同时将自己的服务器列表上传至Redis服务器
+    bool UpdateServerList(std::unordered_map<std::string, std::string> &serv_list);
 };
+};  // namespace chatroom::status
 
 #endif
