@@ -44,9 +44,6 @@ find_package(gRPC CONFIG REQUIRED)
 find_package(spdlog REQUIRED)
 # target_link_libraries(my_project PRIVATE spdlog::spdlog)
 
-
-
-
 # IOContextPool/ThreadPool options
 option(USE_IOCONTEXT_POOL "Use IOContext Pool implementation" OFF)
 option(USE_IOTHREAD_POOL "Use Thread Pool implementation" OFF)
@@ -65,6 +62,7 @@ else()
     message(STATUS "Using default single-threaded implementation.")
 endif()
 
+# go to subdirs
 add_subdirectory(src)
 add_subdirectory(proto)
 add_subdirectory(test)
@@ -91,6 +89,7 @@ else()
     message(STATUS "clang-tidy not found, skipping clang-tidy-check target.")
 endif()
 
+# cppcheck
 find_program(CPPCHECK_EXE NAMES cppcheck)
 
 if(CPPCHECK_EXE)
