@@ -49,15 +49,50 @@ namespace chatroom::client {
         // 接收响应
         http::read(tcp, recv_buf, resp);
         if (resp.result() != http::status::ok) {
-            std::string resp_body = beast::buffers_to_string(resp.body().data());
-            spdlog::error("Login failed: {}", resp_body);
-            return false;
+            if (resp.result() == http::status::conflict) {
+                // 409 conflict
+                // 表示已有其他客户端登录，等待一定时间后重试
+                int attempt = 0;
+                vector<int> wait_time = {1, 1, 2, 3};
+                bool done = false;
+                while (attempt < 4) {
+                    tcp.close();
+                    resp = http::response<http::dynamic_body>();
+                    recv_buf.clear();
+                    sleep(wait_time[attempt]);
+                    tcp.connect(addr_result);
+                    http::write(tcp, req);
+                    http::read(tcp, recv_buf, resp);
+                    if (resp.result() == http::status::ok) {
+                        done = true;
+                        break;
+                    } else if (resp.result() == http::status::conflict) {
+                        // 继续重试
+                        attempt++;
+                        continue;
+                    } else {
+                        // 其他错误
+                        break;
+                    }
+                }
+                if (!done) {
+                    std::string resp_body = beast::buffers_to_string(resp.body().data());
+                    spdlog::error("Login failed: {}", resp_body);
+                    return false;
+                }
+            } else {
+                // other error
+                std::string resp_body = beast::buffers_to_string(resp.body().data());
+                spdlog::error("Login failed: {}", resp_body);
+                return false;
+            }
         }
 
         // 登录成功获取其中的token和服务器地址进行登录
+        std::string resp_body = beast::buffers_to_string(resp.body().data());
         Json::Reader rr;
         Json::Value readed;
-        bool ret = rr.parse(beast::buffers_to_string(resp.body().data()), readed, false);
+        bool ret = rr.parse(resp_body, readed, false);
 
         // http_gate处代码
         // resp_json["token"] = token;

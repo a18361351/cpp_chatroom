@@ -5,6 +5,7 @@ namespace chatroom::backend {
     void MQHandler::WorkerFn() {
         unordered_map<std::string, RedisMgr::ItemStream> stms;
         std::string mq_key = "stream:server:"; mq_key += server_id_;
+        std::string mq2_key = "stream:serverctl:"; mq2_key += server_id_;
         while (running_) {
             // stms[mq_key].clear();
             stms.clear();
@@ -14,20 +15,48 @@ namespace chatroom::backend {
                 continue;   // timeout
             }
             if (stms.empty()) continue;
-            auto& stm = stms.at(mq_key);
-            spdlog::debug("Handling {} messages from MQ", stm.size());
-            for (const auto& item : stm) {
-                // item: msg_id, optional<{{k, v}, ...}
-                auto& msg = item.second;
-                uint64_t from = std::stoull(msg->at("from"));
-                uint64_t to = std::stoull(msg->at("to"));
-                std::string_view content = msg->at("content");
-                Handler(from, to, content);
+            for (auto& stm : stms) {
+                if (stm.first == mq_key) {
+                    for (auto& item : stm.second) {
+                        MessageHandler(item);
+                    }
+                } else if (stm.first == mq2_key) {
+                    for (auto& item : stm.second) {
+                        CtrlMsgHandler(item);
+                    }
+                } else {
+                    spdlog::warn("Unknown message queue: {}", stm.first);
+                }
             }
+            
         }
     }
 
-    void MQHandler::Handler(uint64_t from, uint64_t to, std::string_view content) {
+    // type = {"kick", ...}
+    void MQHandler::CtrlMsgHandler(RedisMgr::Item& item) {
+        if (!item.second.has_value()) return;
+        auto& msg = item.second.value();
+        std::string_view type = msg.at("type");
+        if (type == "kick") {
+            uint64_t uid = std::stoull(msg.at("uid"));
+            spdlog::info("Kicking user {} from server {}", uid, server_id_);
+            auto sess = sess_->GetSession(uid);
+            if (sess) {
+                sess->Close(); // 关闭会话
+            } else {
+                spdlog::warn("Kick command can't find user with uid {}", uid);
+            }
+        } else {
+            spdlog::warn("Unknown control message type: {}", type);
+        }
+    }
+
+    void MQHandler::MessageHandler(RedisMgr::Item& item) {
+        if (!item.second.has_value()) return;
+        auto& msg = item.second.value();
+        uint64_t from = std::stoull(msg.at("from"));
+        uint64_t to = std::stoull(msg.at("to"));
+        std::string_view content = msg.at("content");
         // HEAD_LEN | FROM_UID | CONTENT
         auto sending = std::make_shared<MsgNode>(HEAD_LEN + sizeof(uint64_t) + content.size());
         WriteNetField64(sending->GetContent(), from);

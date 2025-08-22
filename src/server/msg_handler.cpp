@@ -62,8 +62,22 @@ void chatroom::backend::MsgHandler::Worker() {
 // TODO(user): unfinished
 // 消息处理逻辑
 void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& msg) {
+    if (!sess) {
+        spdlog::warn("MsgHandler: Received message with null session pointer");
+        return; // 无效的会话
+    }
+    if (!msg) {
+        if (sess->IsVerified()) {
+            spdlog::info("Session {} closed", sess->GetUserId());
+            // 将用户设置为非在线状态并立即更新
+            status_uploader_->RemoveSession(sess->GetUserId());
+            status_uploader_->UpdateNow();
+        }
+        return;
+    }
+
     uint32_t msg_type = msg->GetTagField();
-    status_uploader_->AddSession(sess->GetUserId());    // 收到了用户发送的消息，表明其还在线
+    status_uploader_->AddSession(sess->GetUserId());    // 收到了用户发送的消息，我们更新其在线状态
     switch (msg_type) {
         case DEBUG:
         {
@@ -117,6 +131,10 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
         case CHAT_MSG:
         {
             spdlog::debug("Chat message received");
+            if (!sess->IsVerified()) {
+                // 未验证的用户无法发送消息
+                return;
+            }
             uint64_t target_uid = ReadNetField64(msg->GetContent());
             auto target_sess = sess_mgr_->GetSession(target_uid);
             if (!target_sess) {
@@ -149,6 +167,10 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
         {
             // TODO(user): 完成群聊功能
             spdlog::debug("GroupChat message received");
+            if (!sess->IsVerified()) {
+                // 未验证的用户无法发送消息
+                return;
+            }
             uint64_t target_group;
             return;
         }

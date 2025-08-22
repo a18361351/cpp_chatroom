@@ -110,14 +110,39 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     // 检查用户的登录状态
     auto check_result = redis_->UserLoginAttempt(std::to_string(uid));
     if (!check_result.first) { // 尝试登录请求失败：用户已登录或无法查询在线状态
-        if (!check_result.second.has_value()) { // 无法查询在线状态
+        if (!check_result.second.has_value()) { 
+            // 无法查询在线状态
             spdlog::error("Redis UserLoginAttempt failed");
             return server_error(std::move(req), "Server error");
         }
+        if (check_result.second.value() == "unset") {
+            // 其他用户正在试图登录中！阻止本次登录。
+            // TODO(user): 换一个响应码
+            spdlog::info("Another client is trying to login!");
+            return forbidden_request(std::move(req), "Another client is trying to login!");
+        }
         // 否则，就是用户已登录的情况
-        // TODO(user): 实现强制下线功能
+        // 我们实现的思路为：
+        //  1. 通过消息队列，向对应服务器发送下线消息
+        //  2. 向客户端发送重试消息，让客户端延迟一段时间重试
+        // 这种方法要求客户端需要重试，但是减小了网关的压力
         spdlog::info("User already logined, force kick currently online user {}", username);
-        return forbidden_request(std::move(req), "User already login, we will implement force-login logic later~");
+        // 发送下线消息
+        redis_->SendServerKickCmd(check_result.second.value(), uid);
+
+        // 向客户端发送重试消息
+        resp.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        resp.set(http::field::content_type, "application/json");
+        resp.result(http::status::conflict);    // 409 Conflict
+        resp.keep_alive(req.keep_alive());
+        Json::Value retry_resp;
+        Json::StreamWriterBuilder writer;
+        retry_resp["result"] = "retry";
+        retry_resp["message"] = "User already online, please retry later";
+        
+        resp.body() = Json::writeString(writer, retry_resp);
+        resp.prepare_payload();
+        return resp;
     }
 
     // 生成用户的token
@@ -131,6 +156,7 @@ boost::beast::http::message_generator chatroom::gateway::ReqHandler::LoginLogic(
     resp.keep_alive(req.keep_alive());
     Json::Value resp_json;
     Json::StreamWriterBuilder writer;
+    resp_json["result"] = "ok";
     resp_json["token"] = token;
     resp_json["server_addr"] = addr;
     resp_json["uid"] = uid;

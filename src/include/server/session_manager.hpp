@@ -1,11 +1,13 @@
 #ifndef BACKEND_SESSION_MANAGER_HEADER
 #define BACKEND_SESSION_MANAGER_HEADER
 
+// session_manager.hpp: 管理当前服务器中Session列表的类
+//  其主要职责仅为按UID存储Session列表，同时保存临时Session列表
+//  因此该类对外的依赖仅有Session类
+
 #include <memory>
 
 #include "server/session.hpp"
-
-class Session;
 
 namespace chatroom::backend {
     class SessionManager {

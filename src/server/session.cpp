@@ -176,6 +176,11 @@ namespace chatroom::backend {
         if (down_.compare_exchange_strong(expected, true)) {
             // 异步操作会被中断
             sock_.close();
+            auto handler = handler_.lock();
+            if (handler) {
+                // 告诉handler该会话下线，更新在线状态
+                handler->PostMessage(shared_from_this(), nullptr);
+            }
             auto mgr = mgr_.lock();
             if (mgr) {
                 if (verified_) {

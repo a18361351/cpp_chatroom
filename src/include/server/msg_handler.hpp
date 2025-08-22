@@ -1,7 +1,8 @@
 #ifndef SERVER_MESSAGE_HANDLER_HEADER
 #define SERVER_MESSAGE_HANDLER_HEADER
 
-// msg_handler.hpp: 消息处理器，其由单个工作线程异步处理这些消息（也许可以扩展为线程池？）
+// msg_handler.hpp: 消息处理器，其由单个工作线程（或线程池）异步处理这些消息
+//  其也负责Redis服务中用户在线状态的更新
 
 #include <condition_variable>
 #include <queue>
@@ -38,6 +39,8 @@ namespace chatroom::backend {
             , status_uploader_(std::move(status_uploader)) {}
 
         // @brief 异步向处理队列投递一个消息，并进行处理
+        // @param sess 指向Session对象的指针
+        // @param msg  指向消息节点的指针；特别的，msg为空指针时，表示一个Session下线了
         bool PostMessage(CbSessType sess, RcvdMsgType msg);
 
         // @brief 启动消息处理器的工作线程

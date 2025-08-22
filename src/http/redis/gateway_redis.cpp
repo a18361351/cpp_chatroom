@@ -40,20 +40,53 @@ namespace chatroom::gateway {
     std::pair<bool, std::optional<std::string>> RedisMgr::UserLoginAttempt(std::string_view user_id) {
         // TODO(user): 写成脚本最好
         std::string key("status:"); key += user_id;
-        // 检查用户是否以及登录？
-        auto ret = GetRedis().hget(key, "server_id");
-        if (ret.has_value()) {
-            // 以及登录，则返回其所在的服务器编号，实现强制下线逻辑
-            return {false, ret};
-        } // else
-        // 否则，在Redis中更新用户状态
-        thread_local unordered_map<string, string> user_data = {{"server_id", "unset"}, {"status", "unset"}};
-        user_data["status"] = "verifyed";
-        long long field_set = GetRedis().hsetex(key, user_data.begin(), user_data.end(), std::chrono::milliseconds(60000));
-        if (field_set != 1) {
-            return {false, nullopt};
+
+        static const std::string lua_script = R"(
+            if redis.call("HEXISTS", KEYS[1], "server_id") == 1 then
+                local old_server = redis.call("HGET", KEYS[1], "server_id")
+                return old_server
+            else
+                redis.call("HSET", KEYS[1], "server_id", "unset", "status", "verifyed")
+                redis.call("PEXPIRE", KEYS[1], ARGV[1])
+                return ""
+            end
+        )";
+        
+        auto ans = GetRedis().eval<std::string>(lua_script, {key}, {std::to_string(60000)}); // 60s
+
+        if (ans.empty()) {
+            // 设置成功
+            return {true, std::nullopt};
+        } else {
+            // 已存在，返回旧 server_id
+            return {false, ans};
         }
-        return {true, nullopt};
+
+        // // 检查用户是否以及登录？
+        // auto ret = GetRedis().hget(key, "server_id");
+        // if (ret.has_value()) {
+        //     // 以及登录，则返回其所在的服务器编号，实现强制下线逻辑
+        //     return {false, ret};
+        // } // else
+        // // 否则，在Redis中更新用户状态
+        // thread_local unordered_map<string, string> user_data = {{"server_id", "unset"}, {"status", "unset"}};
+        // user_data["status"] = "verifyed";
+        // long long field_set = GetRedis().hsetex(key, user_data.begin(), user_data.end(), std::chrono::milliseconds(60000));
+        // if (field_set != 1) {
+        //     return {false, nullopt};
+        // }
+        // return {true, nullopt};
+    }
+
+    std::string RedisMgr::SendServerKickCmd(std::string_view server_id, uint64_t uid, int queue_max_len) {
+        std::string mq2_key = "stream:serverctl:"; mq2_key += server_id;
+        std::string uid_str = std::to_string(uid);
+        std::vector<std::pair<std::string_view, std::string_view>> msg = {
+            {"type", "kick"},
+            {"uid", uid_str}
+        };
+        // approx = true
+        return GetRedis().xadd(mq2_key, "*", msg.begin(), msg.end(), queue_max_len, true);
     }
 
 }

@@ -60,13 +60,18 @@ int main() {
             cin >> username;
             cout << "Passcode: ";
             cin >> passcode;
-            if (gate.Login(username, passcode, token, server_addr, uid)) {
-                cout << "Login success\n";
-                cout << "Token: " << token << "\n";
-                cout << "Server address: " << server_addr << "\n";
-                break;  // 进入下一步，向对应的后台服务器发起登陆请求
-            } else {
-                cout << "Login failed\n";
+            try {
+                if (gate.Login(username, passcode, token, server_addr, uid)) {
+                    cout << "Login success\n";
+                    cout << "Token: " << token << "\n";
+                    cout << "Server address: " << server_addr << "\n";
+                    break;  // 进入下一步，向对应的后台服务器发起登陆请求
+                } else {
+                    cout << "Login failed\n";
+                }
+            } catch (const std::exception& e) {
+                cout << "Exception: " << e.what() << "\n";
+                continue;
             }
         } else if (inp == "register") {
             string username, passcode;

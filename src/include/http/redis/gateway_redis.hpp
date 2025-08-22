@@ -31,6 +31,9 @@ namespace chatroom::gateway {
 
         // @brief 在验证成功后，更新缓存中的用户信息
         bool UpdateUserInfo(std::string_view user_id, std::string_view user_name);
+    
+        // @brief 发送控制消息到对应的后台服务器
+        std::string SendServerKickCmd(std::string_view server_id, uint64_t uid, int max_count = 1000);
     };
 }
 

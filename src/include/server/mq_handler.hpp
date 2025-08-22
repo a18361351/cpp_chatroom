@@ -29,7 +29,8 @@ namespace chatroom::backend {
 
         private:
         void WorkerFn();
-        void Handler(uint64_t from, uint64_t to, std::string_view content);
+        void MessageHandler(RedisMgr::Item& item);
+        void CtrlMsgHandler(RedisMgr::Item& item);
         std::atomic_bool running_;
         std::thread worker_;
         std::string server_id_;

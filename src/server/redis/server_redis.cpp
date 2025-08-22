@@ -45,21 +45,32 @@ namespace chatroom::backend {
 
     void RedisMgr::RecvFromMsgQueueNoACK(std::string_view server_id, std::string_view consumer_id, std::unordered_map<std::string, ItemStream>& out, uint block_ms, uint recv_count) {
         std::string mq_key = "stream:server:"; mq_key += server_id;
+        std::string mq2_key = "stream:serverctl:"; mq2_key += server_id;
+        std::vector<std::pair<std::string, std::string>> mqs_name = { { mq_key, ">"}, { mq2_key, ">"} };
         std::string consumer = "server"; consumer += consumer_id;
         std::string group_name = "message_group"; group_name += server_id;
         // GetRedis().xread(mq_key, "$", std::chrono::milliseconds(block_ms), recv_count, std::back_inserter(out));
         // noack = true
-        GetRedis().xreadgroup(group_name, consumer, mq_key, ">", std::chrono::milliseconds(block_ms), recv_count, true, std::inserter(out, out.end()));
+        // GetRedis().xreadgroup(group_name, consumer, mq_key, ">", std::chrono::milliseconds(block_ms), recv_count, true, std::inserter(out, out.end()));
+        GetRedis().xreadgroup(group_name, consumer, mqs_name.begin(), mqs_name.end(), recv_count, true, std::inserter(out, out.end()));
     }
 
     void RedisMgr::RegisterMsgQueue(std::string_view server_id, bool read_from_begin) {
         std::string mq_key = "stream:server:"; mq_key += server_id;
+        std::string mq2_key = "stream:serverctl:"; mq2_key += server_id;
         std::string group_name = "message_group"; group_name += server_id;
         try {
             GetRedis().xgroup_create(mq_key, group_name, read_from_begin ? "0" : "$", true);
         } catch (const sw::redis::ReplyError& e) {
             spdlog::info("Message queue group {} already exists, ignoring error: {}", group_name, e.what());
         }
+        try {
+            GetRedis().xgroup_create(mq2_key, group_name, read_from_begin ? "0" : "$", true);
+        } catch (const sw::redis::ReplyError& e) {
+            spdlog::info("Message queue group {} already exists, ignoring error: {}", group_name, e.what());
+        }
     }
+
+    
 
 }

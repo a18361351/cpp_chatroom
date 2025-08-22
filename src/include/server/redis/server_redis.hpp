@@ -28,9 +28,9 @@ namespace chatroom::backend {
 
         bool UpdateUserStatus(std::string_view server_id, uint64_t uid);
 
-        using Attrs = std::unordered_map<std::string, std::string>;
-        using Item = std::pair<std::string, std::optional<Attrs>>;
-        using ItemStream = std::vector<Item>;
+        using Attrs = std::unordered_map<std::string, std::string>; // Item中的属性列表（键值对）
+        using Item = std::pair<std::string, std::optional<Attrs>>;  // (id, attrs)
+        using ItemStream = std::vector<Item>;                       // 一个RedisStream流，包含其中的一系列消息
         
         // @brief 从消息队列中接收消息，接收即确认
         void RecvFromMsgQueueNoACK(std::string_view server_id, std::string_view consumer_id, std::unordered_map<std::string, ItemStream>& out, uint block_ms = 2000, uint recv_count = 10);

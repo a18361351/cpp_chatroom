@@ -14,7 +14,7 @@ namespace chatroom::backend {
         public:
         OnlineStatusUploader(std::shared_ptr<RedisMgr> redis, TimerTaskManager* timer_mgr, uint32_t interval_sec = 10) : redis_(std::move(redis)), timer_mgr_(timer_mgr) {
             task_iter_ = timer_mgr_->CreateTimer(std::chrono::milliseconds(interval_sec * 1000), [this] {
-                spdlog::info("OnlineStatusUploader: Uploading online status (timed)");
+                spdlog::debug("OnlineStatusUploader: Uploading online status (timed)");
                 UploadImpl();
             }, true);
             (*task_iter_)->Activate();
@@ -29,28 +29,61 @@ namespace chatroom::backend {
             return sess_.insert(uid).second;
         }
 
+        bool RemoveSession(uint64_t uid) {
+            std::unique_lock lock(lck_);
+            sess_.erase(uid);
+            removal_sess_.insert(uid);
+            return true;
+        }
+
+        void UpdateNow() {
+            UploadImpl();
+            // 重新进行一次计时
+            (*task_iter_)->Cancel();
+            (*task_iter_)->Activate();
+        }
+
         private:
         void UploadImpl() {
+            bool expect = false;
+            if (!in_progress_.compare_exchange_strong(expect, true)) {
+                return;
+            }
             std::unique_lock lock(lck_);
             std::unordered_set<uint64_t> sending_list_ = std::move(sess_);
             sess_.clear();
+            std::unordered_set<uint64_t> erasing_list_ = std::move(removal_sess_);
+            removal_sess_.clear();
             lock.unlock();  // ===== EXIT CRITICAL =====
 
             auto pl = redis_->GetPipeline();
+            
+            // updating uid
             std::unordered_map<std::string, std::string> hm = {{"server_id", "unset"}, {"status", "online"}};
             for (auto uid : sending_list_) {
                 std::string key("status:"); key += std::to_string(uid);
                 // HEXPIRE key seconds [NX | XX | GT | LT] FIELDS numfields field [field ...]
                 pl.command("HEXPIRE", key, 30, "FIELDS", 2, "server_id", "status");
             }
-            spdlog::info("OnlineStatusUploader: Updated {} users", sending_list_.size());
+
+            // remove uid
+            for (auto uid : erasing_list_) {
+                std::string key("status:"); key += std::to_string(uid);
+                pl.del(key);
+            }
+
+            spdlog::debug("OnlineStatusUploader: Updated {} users, removed {} users", sending_list_.size(), erasing_list_.size());
             pl.exec();
+
+            in_progress_.store(false);
         }
         std::shared_ptr<RedisMgr> redis_;
         std::unordered_set<uint64_t> sess_; // 待更新的会话UID
+        std::unordered_set<uint64_t> removal_sess_; // 待删除的会话UID
         TimerTaskManager* timer_mgr_;
         TimerTaskManager::TaskIter task_iter_;
         std::mutex lck_;
+        std::atomic_bool in_progress_;
     };
 }
 
