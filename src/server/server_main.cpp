@@ -10,6 +10,7 @@ using namespace boost::asio;
 
 
 int main(int argc, char** argv) {
+    spdlog::set_level(spdlog::level::debug);
     cout << "Chatroom Server\n";
     uint32_t server_id = 100;
     string status_rpc_addr = "192.168.56.101:3000";

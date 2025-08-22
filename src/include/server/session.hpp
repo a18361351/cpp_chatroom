@@ -31,29 +31,29 @@ namespace chatroom::backend {
         Session(boost::asio::io_context& ctx, 
                 std::weak_ptr<MsgHandler> handler,
                 std::weak_ptr<SessionManager> mgr) : 
-            user_id_(0) // unset
-            , recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE))
+            recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE))
             , sock_(ctx)
             , strand_(ctx.get_executor()) // strand保护在多个线程同时执行回调的情况下，不会并发调用回调
             , handler_(std::move(handler))
             , mgr_(std::move(mgr))
             {}
 
-        Session(boost::asio::io_context& ctx, 
-                boost::asio::ip::tcp::socket&& socket, 
-                uint64_t user_id,
-                std::weak_ptr<MsgHandler> handler,
-                std::weak_ptr<SessionManager> mgr
-            ) : 
-            user_id_(user_id)
-            , recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE))
-            , sock_(std::move(socket))
-            , strand_(ctx.get_executor())
-            , handler_(std::move(handler))
-            , mgr_(std::move(mgr))
-        {
-
-        }
+        // unused...
+        // Session(boost::asio::io_context& ctx, 
+        //         boost::asio::ip::tcp::socket&& socket, 
+        //         uint64_t user_id,
+        //         std::weak_ptr<MsgHandler> handler,
+        //         std::weak_ptr<SessionManager> mgr
+        //     ) : 
+        //     user_id_(user_id)
+        //     , recv_ptr_(std::make_shared<MsgNode>(INITIAL_NODE_SIZE))
+        //     , sock_(std::move(socket))
+        //     , strand_(ctx.get_executor())
+        //     , handler_(std::move(handler))
+        //     , mgr_(std::move(mgr))
+        // {
+        // 
+        // }
         uint64_t GetUserId() const {
             return user_id_;
         }
@@ -112,7 +112,7 @@ namespace chatroom::backend {
         // TODO(user): 发送队列可以设置长度限制，以保证不会产生发送速率过快的情况
         // TODO(user): 设置超时相关的实现（如自动定时器），并在Session处实现
         // ***** 用户相关 *****
-        UID user_id_;  // 这里sess_id == user_id
+        UID user_id_{};  // 这里sess_id == user_id
         bool verified_{false};
         // ***** 接收操作 *****
         std::shared_ptr<MsgNode> recv_ptr_;

@@ -8,7 +8,7 @@
 namespace chatroom {
     class UIDGenerator {
         public:
-        UIDGenerator(uint16_t worker_id, uint64_t begin_epoch = 0) : worker_id_(worker_id & 0x3FF), epoch_(std::chrono::milliseconds(begin_epoch)) {}
+        explicit UIDGenerator(uint16_t worker_id, uint64_t begin_epoch = 0) : worker_id_(worker_id & 0x3FF), epoch_(std::chrono::milliseconds(begin_epoch)) {}
         
         uint64_t Generate() {
             std::unique_lock lock(mtx_);

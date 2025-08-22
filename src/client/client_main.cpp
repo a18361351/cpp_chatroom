@@ -35,7 +35,7 @@ namespace http = beast::http;
 
 
 int main() {
-    spdlog::set_level(spdlog::level::info);
+    spdlog::set_level(spdlog::level::debug);
 
     boost::asio::io_context ctx;
     client::GatewayHelper gate(ctx);

@@ -10,6 +10,7 @@
 const std::string status_addr = "0.0.0.0:3000";
 
 int main(int argc, char** argv) {
+    spdlog::set_level(spdlog::level::debug);
     spdlog::info("Status server executable starting at {}", status_addr.c_str());
     chatroom::status::StatusServer srv;
     // redis service

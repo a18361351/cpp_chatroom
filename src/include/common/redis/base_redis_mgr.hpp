@@ -31,8 +31,7 @@ namespace chatroom {
 
         // cannot be copied
         // but movable
-        BaseRedisMgr(BaseRedisMgr&& rhs) noexcept {
-            redis_ = std::move(rhs.redis_);
+        BaseRedisMgr(BaseRedisMgr&& rhs) noexcept : redis_(std::move(rhs.redis_)) {
             rhs.redis_.reset();
         }
         BaseRedisMgr& operator=(BaseRedisMgr&& rhs) noexcept {

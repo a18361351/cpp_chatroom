@@ -28,7 +28,7 @@ namespace chatroom::backend {
         status::StatusService::Stub* GetThreadStatusStub() {
             if (ch_status_) {
                 thread_local std::unique_ptr<status::StatusService::Stub> local_stub = std::make_unique<status::StatusService::Stub>(ch_status_);
-                return local_stub.get();
+                return local_stub.get();    // NOLINT
             }
             return nullptr;
         }

@@ -1,6 +1,6 @@
 # README
 
-客户端的源码文件。包含：
+临时测试用的命令行客户端的源码文件。包含：
 
 - `client_class.cpp`, `client_class.hpp`: 客户端的主要逻辑实现，包括登录、消息处理等功能。
   - `class GatewayHelper`: 负责客户端与网关的交互（登录、注册功能）

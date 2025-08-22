@@ -4,6 +4,8 @@
 #include "http/gateway_class.hpp"
 #include "log/log_manager.hpp"
 
+// TODO(user): 设置配置文件……
+
 using namespace std;
 using GatewayApp = chatroom::gateway::GatewayClass;
 namespace asio = boost::asio;
@@ -17,6 +19,9 @@ const std::string password = "123456";
 const std::string db_name = "chat";
 
 int main() {
+
+    spdlog::set_level(spdlog::level::debug);
+
     asio::io_context http_ctx;
     ip::tcp::endpoint ep(ip::tcp::v4(), 1234);
     const string status_ep = "192.168.56.101:3000";

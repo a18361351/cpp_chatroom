@@ -18,7 +18,7 @@
 namespace chatroom::client {
     class GatewayHelper {
         public:
-        GatewayHelper(boost::asio::io_context& ctx) : ctx_(ctx) {}
+        explicit GatewayHelper(boost::asio::io_context& ctx) : ctx_(ctx) {}
         bool Login(const std::string& username, const std::string& passcode, std::string& token, std::string& server_addr, uint64_t& uid);
         bool Register(const std::string& username, const std::string& passcode);
         void SetRemoteAddress(const std::string& host, const std::string& port);
@@ -67,7 +67,7 @@ namespace chatroom::client {
         std::mutex mtx_;
         std::thread worker_;
         std::condition_variable cv_;
-        std::atomic_bool running_;
+        std::atomic_bool running_{false};
     };
 }
 

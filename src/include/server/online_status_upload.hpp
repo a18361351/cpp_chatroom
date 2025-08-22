@@ -59,7 +59,7 @@ namespace chatroom::backend {
             auto pl = redis_->GetPipeline();
             
             // updating uid
-            std::unordered_map<std::string, std::string> hm = {{"server_id", "unset"}, {"status", "online"}};
+            // std::unordered_map<std::string, std::string> hm = {{"server_id", "unset"}, {"status", "online"}};
             for (auto uid : sending_list_) {
                 std::string key("status:"); key += std::to_string(uid);
                 // HEXPIRE key seconds [NX | XX | GT | LT] FIELDS numfields field [field ...]

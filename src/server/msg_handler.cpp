@@ -171,7 +171,7 @@ void chatroom::backend::MsgHandler::Processor(CbSessType&& sess, RcvdMsgType&& m
                 // 未验证的用户无法发送消息
                 return;
             }
-            uint64_t target_group;
+            // uint64_t target_group;
             return;
         }
         break;

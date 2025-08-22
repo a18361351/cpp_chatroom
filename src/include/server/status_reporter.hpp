@@ -23,7 +23,7 @@ namespace chatroom::backend {
         private:
         std::shared_ptr<StatusRPCClient> rpc_client_;
         public:
-        StatusReportRPCImpl(std::shared_ptr<StatusRPCClient> rpc_cli) : rpc_client_(std::move(rpc_cli)) {}
+        explicit StatusReportRPCImpl(std::shared_ptr<StatusRPCClient> rpc_cli) : rpc_client_(std::move(rpc_cli)) {}
         grpc::Status ReportLoad(uint32_t id, uint32_t load);
         grpc::Status ReportServerRegister(uint32_t id, const std::string& serv_addr, uint32_t load);
         grpc::Status ReportServerLeave();

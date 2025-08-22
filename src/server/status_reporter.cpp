@@ -31,7 +31,7 @@ namespace chatroom::backend {
         return rpc_status;
     }
     grpc::Status StatusReportRPCImpl::ReportServerLeave() {
-        auto stub = rpc_client_->GetThreadStatusStub();
+        // auto stub = rpc_client_->GetThreadStatusStub();
         // TODO(user): Implement ServerLeave interface in status service
         return {grpc::StatusCode::UNIMPLEMENTED, "Not implemented"};
     }

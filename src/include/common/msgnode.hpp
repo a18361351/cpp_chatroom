@@ -1,6 +1,22 @@
 #ifndef MSGNODE_HEADER
 #define MSGNODE_HEADER
 
+// msgnode.hpp: 定义了整个项目中用于网络传输的TLV报文包格式
+// **********************************************
+// 当我们使用这个报文包时，其一般内容为：
+//  | <----- 4B ------->|<------ 4B ------->|<--- len size --->| (总共content_len + 8B)
+//  | Tag(4字节，网络序) | Len(4字节，网络序) | Content(Len字节) |
+//
+//  其中Tag标记了这个报文的类型；Len指定了后续内容（Content）的长度，因此我们可以确定这之后的Len字节
+// 均属于当前的报文。而Len字节之后，如果还有内容的话，那么接下来8B属于下一个报文的头部，我们又可以从中
+// 得到下一个报文的Tag和Len信息，以及后续的Content长度，这样我们清晰地分割了报文，解决了粘包的问题。
+//
+//  因此，服务端在接收任何MsgNode报文时，采用的逻辑均为：接收8B头部 -> 获取Len -> 接收Len长度内容 
+// -> 循环。因此，发送者需要严格遵守该报文的协议规则。
+//
+//  值得注意的是，报文的原始内容中Tag字段和Len字段一定是网络序的。因此在读取时要进行ntoh，写入时进行hton
+// 的转换！
+
 #include <cassert>
 #include <cstring>
 #include <cstdint>
@@ -41,7 +57,6 @@ namespace chatroom {
     const uint32_t MAX_CTX_LEN = 1024 * 1024;   // 消息长度上限，实际应用应该不会发送如此大的消息
 
     // 会话层用来存储数据的MsgNode节点类
-    // 在其中定义一个TLV协议格式：
     //  | Tag(4字节，网络序) | Len(4字节，网络序) | Content(Len字节) |
     class MsgNode {
         public:
@@ -81,7 +96,9 @@ namespace chatroom {
             }
         }
 
-        // @brief 直接构造原始的对象，不建议使用
+        // @brief 直接通过原始指针来构造指向该缓冲区的对象，很不安全
+        // @param data_ptr 指向已有缓冲区的指针，该对象会在MsgNode析构时被自动delete
+        // @param data_len 该缓冲区的长度
         [[deprecated("Initializing MsgNode by raw pointer is unsafe and may cause problems if misused.")]]
         MsgNode(char* data_ptr, uint32_t data_len) :
             data_(data_ptr),
@@ -144,7 +161,7 @@ namespace chatroom {
         // @Copy assign && Copy ctor
         // @因为项目中我们使用的是shared_ptr<MsgNode>，理论上不会涉及到MsgNode的拷贝
         // @但是为了这个类的一致性，我们还是把他实现在这里，同时加上警告，避免意外调用
-        [[deprecated("You are copying a MsgNode object which usually shouldn't be copied.")]]
+        [[deprecated("Please be wary that you are copying a MsgNode object.")]]
         MsgNode& operator=(const MsgNode& rhs) {
             // 自我赋值检查
             if (this == &rhs) {
@@ -163,7 +180,7 @@ namespace chatroom {
             ctx_len_ = rhs.ctx_len_;
             return *this;
         }
-        [[deprecated("You are copying a MsgNode object which usually shouldn't be copied.")]]
+        [[deprecated("Please be wary that you are copying a MsgNode object.")]]
         MsgNode(const MsgNode& rhs) {
             data_ = new char[rhs.max_len_];
             
